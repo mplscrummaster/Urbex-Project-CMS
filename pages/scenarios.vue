@@ -150,6 +150,7 @@ import ScenarioListSidebar from "@/src/components/ScenarioListSidebar.vue";
 import { useScenarioStore } from "@/src/stores/scenario";
 import { LMap } from "@vue-leaflet/vue-leaflet";
 import { blockUtils, isBlockEmpty } from "@/src/composables/blockUtils";
+import { useToast } from "@/src/composables/useToast";
 
 const communeShapes = ref([]);
 const showIntroAddMenu = ref(false);
@@ -163,8 +164,7 @@ const showConclusion = ref(false);
 const user = ref(null);
 const token = ref(null);
 const isClientReady = ref(false);
-const toastMsg = ref("");
-const toastTimeout = ref(null);
+const { toastMsg, showToast } = useToast();
 
 const CARTO_DARK =
   "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
@@ -305,8 +305,7 @@ async function addBlock(section, type, mission = null) {
       mission._showAddMenu = false;
     }
   } catch (e) {
-    toastMsg.value = "Erreur lors de la création du bloc.";
-    setTimeout(() => (toastMsg.value = ""), 3000);
+    showToast("Erreur lors de la création du bloc.");
   }
 }
 
@@ -417,14 +416,6 @@ function createScenario() {
 
 function onMissionOrderChange() {
   store.reorderMissions(store.missions);
-}
-
-function showToast(msg) {
-  toastMsg.value = msg;
-  if (toastTimeout.value) clearTimeout(toastTimeout.value);
-  toastTimeout.value = setTimeout(() => {
-    toastMsg.value = "";
-  }, 2500);
 }
 
 async function saveDraft() {
