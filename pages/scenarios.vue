@@ -120,27 +120,12 @@
             "
           />
           <!-- Sections Prérequis & Progression et Communes supprimées -->
-          <div
-            class="scenario-actions"
-            style="
-              display: flex;
-              gap: 1rem;
-              justify-content: flex-end;
-              margin-top: 2rem;
-            "
-          >
-            <button @click="cancelChanges" class="btn-cancel">Annuler</button>
-            <button @click="saveDraft" class="btn-draft">
-              Sauvegarder en brouillon
-            </button>
-            <button @click="savePublish" class="btn-publish">
-              {{
-                store.scenarioDetails.is_published
-                  ? "Mettre à jour la publication"
-                  : "Sauvegarder et publier"
-              }}
-            </button>
-          </div>
+          <ScenarioActions
+            :isPublished="store.scenarioDetails.is_published"
+            @cancel="cancelChanges"
+            @saveDraft="saveDraft"
+            @savePublish="savePublish"
+          />
         </div>
       </div>
       <div v-else class="empty-detail">
@@ -188,6 +173,7 @@ import ScenarioIntro from "@/src/components/scenario/ScenarioIntro.vue";
 import MissionList from "@/src/components/scenario/MissionList.vue";
 import ScenarioOutro from "@/src/components/scenario/ScenarioOutro.vue";
 import CommuneSelector from "@/src/components/CommuneSelector.vue";
+import ScenarioActions from "@/src/components/ScenarioActions.vue";
 
 import { useScenarioStore } from "@/src/stores/scenario";
 import { LMap } from "@vue-leaflet/vue-leaflet";
