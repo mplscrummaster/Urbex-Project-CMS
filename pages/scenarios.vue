@@ -181,21 +181,14 @@ import MissionList from "@/src/components/scenario/MissionList.vue";
  */
 import ScenarioOutro from "@/src/components/scenario/ScenarioOutro.vue";
 // Blocs
-import BlockText from "@/src/components/scenario-blocks/BlockText.vue";
-import BlockImage from "@/src/components/scenario-blocks/BlockImage.vue";
-import BlockVideo from "@/src/components/scenario-blocks/BlockVideo.vue";
-import BlockAudio from "@/src/components/scenario-blocks/BlockAudio.vue";
 // Utilitaires
-import { LGeoJson } from "@vue-leaflet/vue-leaflet";
 import axios from "axios";
-import { ref, onMounted, watch, nextTick } from "vue";
+import { ref, onMounted } from "vue";
 import { useScenarioBlocks } from "@/src/composables/useScenarioBlocks";
-
 import { useScenarioStore } from "@/src/stores/scenario";
-import { LMap } from "@vue-leaflet/vue-leaflet";
-import { blockUtils, isBlockEmpty } from "@/src/composables/blockUtils";
 import { useToast } from "@/src/composables/useToast";
 import { useLeafletMap } from "@/src/composables/useLeafletMap";
+import { useCommuneWatcher } from "@/src/composables/useCommuneWatcher";
 
 const store = useScenarioStore();
 const { user, token, isClientReady, loadUserAndToken } = useUser();
@@ -228,12 +221,7 @@ const selectedGeoJsonStyle = {
   fillColor: "#42a5f5",
 };
 
-watch(
-  () => store.communes,
-  () => {
-    updatePolygonStyles(store);
-  }
-);
+// Watcher sur store.communes extrait dans useCommuneWatcher
 
 onMounted(async () => {
   try {
@@ -252,7 +240,9 @@ onMounted(async () => {
 });
 // ...existing code...
 
-// Initialisation utilisateur et missions centralisée
+/**
+ * Initialise l'utilisateur et charge les scénarios si le client est prêt
+ */
 onMounted(() => {
   loadUserAndToken();
   if (isClientReady.value) {
@@ -260,6 +250,9 @@ onMounted(() => {
   }
 });
 
+/**
+ * Initialise Leaflet et ses icônes à l'arrivée sur le client
+ */
 let L;
 onMounted(async () => {
   if (typeof window !== "undefined") {
@@ -280,6 +273,11 @@ onMounted(async () => {
   }
 });
 
+/**
+ * Gère l'ouverture/fermeture des sections collapsibles (intro, missions, conclusion)
+ * @param {string} type - Type de section à ouvrir ('intro', 'mission', 'conclusion')
+ * @param {number|null} idx - Index de la mission à ouvrir (si applicable)
+ */
 function openCollapse(type, idx = null) {
   if (type === "intro") {
     showIntro.value = !showIntro.value;
@@ -298,27 +296,48 @@ function openCollapse(type, idx = null) {
   }
 }
 
+/**
+ * Sélectionne un scénario dans la liste
+ * @param {object} s - Scénario sélectionné
+ */
 function selectScenario(s) {
   store.selectScenario(s, token.value);
 }
 
+/**
+ * Crée un nouveau scénario avec le titre saisi
+ */
 function createScenario() {
   store.createScenario(newTitle.value, user.value?.id, token.value);
   newTitle.value = "";
 }
 
+/**
+ * Réordonne les missions après un drag & drop
+ */
 function onMissionOrderChange() {
   reorderMissions();
 }
 
+/**
+ * Sauvegarde le scénario en brouillon
+ */
 async function saveDraft() {
   await store.saveScenarioFull("draft", token.value);
   showToast("Sauvegardé en brouillon !");
 }
+
+/**
+ * Sauvegarde et publie le scénario
+ */
 async function savePublish() {
   await store.saveScenarioFull("published", token.value);
   showToast("Sauvegardé et publié !");
 }
+
+/**
+ * Annule les modifications et recharge le scénario sélectionné
+ */
 function cancelChanges() {
   if (store.selectedScenario) {
     store.selectScenario(store.selectedScenario, token.value);
@@ -327,6 +346,12 @@ function cancelChanges() {
 }
 
 const { polygonLayers, setPolygonLayer, updatePolygonStyles } = useLeafletMap();
+useCommuneWatcher(store, updatePolygonStyles);
+
+/**
+ * Sélectionne ou désélectionne une commune et met à jour le style du polygone
+ * @param {string|number} communeId - Identifiant de la commune
+ */
 function toggleCommuneSelection(communeId) {
   const id = typeof communeId === "string" ? communeId : String(communeId);
   if (store.isCommuneSelected(id)) {

@@ -37,12 +37,26 @@
 
 <script setup>
 import { ref, watch } from "vue";
+
+/**
+ * Props du composant ScenarioListSidebar
+ * @property {Array} scenarios - Liste des scénarios à afficher
+ * @property {Object} selectedScenario - Scénario actuellement sélectionné
+ * @property {Boolean} loading - Indique si les scénarios sont en cours de chargement
+ * @property {String} error - Message d'erreur éventuel
+ */
 const props = defineProps({
   scenarios: Array,
   selectedScenario: Object,
   loading: Boolean,
   error: String,
 });
+
+/**
+ * Événements émis par le composant
+ * @event selectScenario - Sélection d'un scénario
+ * @event createScenario - Création d'un nouveau scénario
+ */
 const emit = defineEmits(["selectScenario", "createScenario"]);
 const newTitle = ref("");
 watch(

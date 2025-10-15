@@ -55,18 +55,54 @@ import { ref } from "vue";
 import axios from "axios";
 
 export const useScenarioStore = defineStore("scenario", () => {
+  /**
+   * @type {import('vue').Ref<Array>} scenarios - Liste des scénarios
+   */
   const scenarios = ref([]);
+  /**
+   * @type {import('vue').Ref<Boolean>} loading - Indique si les scénarios sont en cours de chargement
+   */
   const loading = ref(false);
+  /**
+   * @type {import('vue').Ref<String>} error - Message d'erreur éventuel
+   */
   const error = ref("");
+  /**
+   * @type {import('vue').Ref<Object|null>} selectedScenario - Scénario actuellement sélectionné
+   */
   const selectedScenario = ref(null);
+  /**
+   * @type {import('vue').Ref<Object|null>} scenarioDetails - Détail du scénario sélectionné
+   */
   const scenarioDetails = ref(null);
+  /**
+   * @type {import('vue').Ref<Boolean>} detailsLoading - Indique si le détail du scénario est en cours de chargement
+   */
   const detailsLoading = ref(false);
+  /**
+   * @type {import('vue').Ref<String>} detailsError - Message d'erreur du détail
+   */
   const detailsError = ref("");
+  /**
+   * @type {import('vue').Ref<Array>} missions - Liste des missions du scénario
+   */
   const missions = ref([]);
+  /**
+   * @type {import('vue').Ref<Array>} communes - Liste des communes sélectionnées
+   */
   const communes = ref([]);
+  /**
+   * @type {import('vue').Ref<String>} communeError - Message d'erreur lié aux communes
+   */
   const communeError = ref("");
   const API_URL = "http://localhost:3000/api/scenarios";
+  /**
+   * @type {import('vue').Ref<Array>} deletedMissionIds - Identifiants des missions supprimées
+   */
   const deletedMissionIds = ref([]);
+  /**
+   * @type {import('vue').Ref<Array>} deletedBlockIds - Identifiants des blocs supprimés
+   */
   const deletedBlockIds = ref([]);
 
   // Ajoute une commune par nom (case insensitive, max 3)
