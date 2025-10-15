@@ -16,6 +16,7 @@ export function useScenarioBlocks(store, token, showToast) {
     let res;
     try {
       if (section === "intro") {
+        // Toujours côté backend pour intro
         res = await axios.post(
           `http://localhost:3000/api/scenarios/${store.selectedScenario.id}/intro/blocks`,
           payload,
@@ -34,6 +35,7 @@ export function useScenarioBlocks(store, token, showToast) {
         }
         showIntroAddMenu.value = false;
       } else if (section === "outro") {
+        // Toujours côté backend pour outro
         res = await axios.post(
           `http://localhost:3000/api/scenarios/${store.selectedScenario.id}/outro/blocks`,
           payload,
@@ -52,23 +54,33 @@ export function useScenarioBlocks(store, token, showToast) {
         }
         showOutroAddMenu.value = false;
       } else if (section === "mission" && mission) {
-        res = await axios.post(
-          `http://localhost:3000/api/missions/${
-            mission._id_mission || mission.id
-          }/blocks`,
-          payload,
-          { headers: { Authorization: `Bearer ${token.value}` } }
-        );
-        if (res?.data?.id) {
+        // Si mission n'a pas d'id backend, ajoute le bloc côté front uniquement
+        if (!mission._id_mission) {
           if (!mission.blocks) mission.blocks = [];
           mission.blocks.push({
             ...payload,
-            id: res.data.id,
-            _id_block: res.data.id,
+            id: Date.now(),
             type: type,
           });
+          mission._showAddMenu = false;
+        } else {
+          // Mission existante en base, on peut appeler l'API
+          res = await axios.post(
+            `http://localhost:3000/api/missions/${mission._id_mission}/blocks`,
+            payload,
+            { headers: { Authorization: `Bearer ${token.value}` } }
+          );
+          if (res?.data?.id) {
+            if (!mission.blocks) mission.blocks = [];
+            mission.blocks.push({
+              ...payload,
+              id: res.data.id,
+              _id_block: res.data.id,
+              type: type,
+            });
+          }
+          mission._showAddMenu = false;
         }
-        mission._showAddMenu = false;
       }
     } catch (e) {
       showToast("Erreur lors de la création du bloc.");

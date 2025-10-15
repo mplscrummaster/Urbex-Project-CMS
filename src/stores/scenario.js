@@ -183,14 +183,102 @@ export const useScenarioStore = defineStore("scenario", () => {
     }
     if (!scenarioDetails.value || !selectedScenario.value) return;
     const scenarioId = selectedScenario.value.id;
-    await axios.put(
-      `${API_URL}/${scenarioId}`,
-      {
-        title_scenario: scenarioDetails.value.title_scenario,
-        is_published: status === "published" ? 1 : 0,
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    // 1. Créer toutes les missions manquantes (async/await sur chaque POST)
+    for (const m of missions.value) {
+      if (!m._id_mission) {
+        try {
+          const res = await axios.post(
+            `http://localhost:3000/api/scenarios/${scenarioId}/missions`,
+            {
+              position_mission: m.position,
+              title_mission: m.title,
+              latitude: m.latitude,
+              longitude: m.longitude,
+              riddle_text: m.riddle_text,
+              answer_word: m.answer_word,
+            },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          if (res.data && res.data.id) {
+            m._id_mission = res.data.id;
+            m.id = res.data.id;
+          }
+        } catch (e) {
+          handleApiError(e, `création mission ${m.title}`);
+        }
+      }
+    }
+    // 2. Créer tous les blocs manquants (après que toutes les missions aient un id)
+    const allBlocksToCreate = [
+      ...(scenarioDetails.value.introBlocks || []),
+      ...(scenarioDetails.value.outroBlocks || []),
+      ...missions.value.flatMap((m) => m.blocks || []),
+    ];
+    for (const b of allBlocksToCreate) {
+      let ownerType = b.owner_type || b.type_owner;
+      if (!ownerType && b._id_mission) ownerType = "mission";
+      if (!ownerType && b._id_scenario) ownerType = "scenario_intro";
+      let missionId = b._id_mission || b.mission_id;
+      let scenarioIdBlock = b._id_scenario || scenarioId;
+      let blockId = b._id_block || b.id;
+      // Si le bloc n'a pas d'id backend, on le crée
+      if (!b._id_block) {
+        try {
+          let res;
+          if (ownerType === "scenario_intro") {
+            res = await axios.post(
+              `http://localhost:3000/api/scenarios/${scenarioIdBlock}/intro/blocks`,
+              {
+                position_block: b.position,
+                type_block: b.type,
+                content_text: b.content_text,
+                url_media: b.url_media,
+                caption: b.caption,
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          } else if (ownerType === "scenario_outro") {
+            res = await axios.post(
+              `http://localhost:3000/api/scenarios/${scenarioIdBlock}/outro/blocks`,
+              {
+                position_block: b.position,
+                type_block: b.type,
+                content_text: b.content_text,
+                url_media: b.url_media,
+                caption: b.caption,
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          } else if (ownerType === "mission") {
+            // missionId doit être à jour
+            res = await axios.post(
+              `http://localhost:3000/api/missions/${
+                b._id_mission || b.mission_id
+              }/blocks`,
+              {
+                position_block: b.position,
+                type_block: b.type,
+                content_text: b.content_text,
+                url_media: b.url_media,
+                caption: b.caption,
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          } else {
+            error.value = "Type de bloc ou parent inconnu.";
+            continue;
+          }
+          if (res?.data?.id) {
+            b._id_block = res.data.id;
+            b.id = res.data.id;
+          }
+        } catch (e) {
+          error.value = "Erreur création bloc.";
+          continue;
+        }
+      }
+    }
+    // 3. Mettre à jour toutes les missions
     for (const m of missions.value) {
       const missionId = m._id_mission || m.id;
       if (!missionId) continue;
@@ -207,6 +295,7 @@ export const useScenarioStore = defineStore("scenario", () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
     }
+    // 3. Mettre à jour les prérequis
     for (const m of missions.value) {
       const missionId = m._id_mission || m.id;
       if (!missionId) continue;
@@ -219,17 +308,8 @@ export const useScenarioStore = defineStore("scenario", () => {
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      /**
-       * Pinia store pour la gestion des scénarios urbex
-       * - Synchronisation backend (missions, blocs, communes)
-       * - Mapping helpers pour missions, blocs, communes
-       * - Centralisation de la gestion des erreurs
-       * - Propagation des prérequis et sélection des communes
-       *
-       * Technologies : Nuxt 3, Vue 3, Pinia
-       * Auteur : Louis Janquart & GitHub Copilot
-       */
     }
+    // 4. Mettre à jour l'ordre des missions
     await axios.put(
       `http://localhost:3000/api/scenarios/${scenarioId}/missions/reorder`,
       missions.value.map((m, idx) => ({
@@ -238,6 +318,7 @@ export const useScenarioStore = defineStore("scenario", () => {
       })),
       { headers: { Authorization: `Bearer ${token}` } }
     );
+    // 5. Mettre à jour les communes
     await axios.post(
       `http://localhost:3000/api/scenarios/${scenarioId}/communes`,
       {
@@ -245,6 +326,7 @@ export const useScenarioStore = defineStore("scenario", () => {
       },
       { headers: { Authorization: `Bearer ${token}` } }
     );
+    // 6. Créer tous les blocs manquants
     const allBlocks = [
       ...(scenarioDetails.value.introBlocks || []),
       ...(scenarioDetails.value.outroBlocks || []),
@@ -257,7 +339,8 @@ export const useScenarioStore = defineStore("scenario", () => {
       let missionId = b._id_mission || b.mission_id;
       let scenarioIdBlock = b._id_scenario || scenarioId;
       let blockId = b._id_block || b.id;
-      if (!blockId || typeof blockId !== "number") {
+      // Si le bloc n'a pas d'id backend, on le crée
+      if (!b._id_block) {
         try {
           let res;
           if (ownerType === "scenario_intro") {
@@ -300,38 +383,36 @@ export const useScenarioStore = defineStore("scenario", () => {
             error.value = "Type de bloc ou parent inconnu.";
             continue;
           }
-          if (!res?.data?.id || typeof res.data.id !== "number") {
-            error.value = "Erreur création bloc : id non retourné.";
-            continue;
+          if (res?.data?.id) {
+            b._id_block = res.data.id;
+            b.id = res.data.id;
           }
-          blockId = res.data.id;
-          b._id_block = blockId;
-          b.id = blockId;
         } catch (e) {
           error.value = "Erreur création bloc.";
           continue;
         }
       }
-      if (!blockId || typeof blockId !== "number") {
-        continue;
-      }
-      try {
-        await axios.put(
-          `http://localhost:3000/api/blocks/${blockId}`,
-          {
-            position_block: b.position,
-            type_block: b.type,
-            content_text: b.content_text,
-            url_media: b.url_media,
-            caption: b.caption,
-          },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } catch (e) {
-        error.value = "Erreur mise à jour bloc.";
-        continue;
+      // Mettre à jour le bloc (PUT)
+      if (b._id_block) {
+        try {
+          await axios.put(
+            `http://localhost:3000/api/blocks/${b._id_block}`,
+            {
+              position_block: b.position,
+              type_block: b.type,
+              content_text: b.content_text,
+              url_media: b.url_media,
+              caption: b.caption,
+            },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } catch (e) {
+          error.value = "Erreur mise à jour bloc.";
+          continue;
+        }
       }
     }
+    // 7. Réordonner les blocs intro/outro/missions
     if (scenarioDetails.value.introBlocks?.length) {
       const blockIds = scenarioDetails.value.introBlocks.map(
         (b) => b._id_block || b.id

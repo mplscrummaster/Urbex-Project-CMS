@@ -295,4 +295,29 @@ const CARTO_ATTR = '&copy; <a href="https://carto.com/attributions">CARTO</a>';
       </div>
     </template>
   </draggable>
+  <div
+    class="add-mission-row"
+    style="display: flex; justify-content: center; margin: 1.5rem 0"
+  >
+    <button
+      class="add-mission-btn"
+      @click="$emit('addMission')"
+      title="Ajouter une mission"
+      style="
+        font-size: 1.5rem;
+        border-radius: 50%;
+        width: 2.5rem;
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #3b82f6;
+        color: #fff;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      "
+    >
+      <span class="material-symbols-rounded">add</span>
+    </button>
+  </div>
 </template>

@@ -12,6 +12,7 @@
           createScenario();
         }
       "
+      @deleteScenario="deleteScenario"
     />
     <div class="main-content">
       <div v-if="store.detailsLoading">Chargement du détail…</div>
@@ -86,6 +87,7 @@
               ({ blocks, missionIdx }) =>
                 (store.missions[missionIdx].blocks = blocks)
             "
+            @addMission="addMission"
           />
           <ScenarioOutro
             :blocks="store.scenarioDetails.outroBlocks"
@@ -134,6 +136,50 @@
 </template>
 
 <script setup>
+/**
+ * Supprime un scénario (backend + store)
+ * @param {object} scenario - Scénario à supprimer
+ */
+async function deleteScenario(scenario) {
+  if (!scenario?.id) return;
+  try {
+    await axios.delete(`http://localhost:3000/api/scenarios/${scenario.id}`, {
+      headers: { Authorization: `Bearer ${token.value}` },
+    });
+    // Retire du store
+    store.scenarios = store.scenarios.filter((s) => s.id !== scenario.id);
+    if (store.selectedScenario?.id === scenario.id) {
+      store.selectedScenario = null;
+      store.scenarioDetails = null;
+    }
+    showToast("Scénario supprimé !");
+  } catch (e) {
+    showToast("Erreur lors de la suppression");
+  }
+}
+/**
+ * Ajoute une nouvelle mission à la fin de la liste
+ */
+function addMission() {
+  // Ajoute la mission uniquement côté front, id temporaire
+  const newMission = {
+    id: Date.now(),
+    title: "Nouvelle mission",
+    latitude: null,
+    longitude: null,
+    riddle_text: "",
+    answer_word: "",
+    prerequisites: [],
+    blocks: [],
+    _open: true,
+    position: store.missions.length + 1,
+  };
+  store.missions.push(newMission);
+  // Ferme toutes les autres missions
+  store.missions.forEach(
+    (m, idx) => (m._open = idx === store.missions.length - 1)
+  );
+}
 import { useUser } from "@/src/composables/useUser";
 import { useMissions } from "@/src/composables/useMissions";
 

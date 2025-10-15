@@ -22,6 +22,20 @@
           >
             {{ s.is_published ? "Publié" : "Brouillon" }}
           </span>
+          <button
+            class="delete-scenario-btn"
+            @click.stop="$emit('deleteScenario', s)"
+            title="Supprimer le scénario"
+            style="
+              background: none;
+              border: none;
+              color: #e53935;
+              cursor: pointer;
+              margin-left: 0.5em;
+            "
+          >
+            <span class="material-symbols-rounded">delete</span>
+          </button>
         </li>
       </ul>
       <form
@@ -67,79 +81,7 @@ watch(
 );
 </script>
 
-<style scoped>
-@use "@/src/styles/abstracts/variables" as v;
-.sidebar {
-  background: v.$color-bg-alt;
-  padding: 2rem 1.5rem;
-  border-right: 1px solid v.$color-border;
-}
-.scenario-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 1.5rem 0;
-}
-.scenario-item {
-  padding: 0.7em 1em;
-  border-radius: v.$radius-sm;
-  margin-bottom: 0.5em;
-  cursor: pointer;
-  background: v.$color-border;
-  color: v.$color-text-dim;
-  transition: background 0.2s, color 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.scenario-item.active {
-  background: v.$color-accent;
-  color: v.$color-text;
-  font-weight: 600;
-}
-.scenario-status-badge {
-  font-size: 0.85em;
-  padding: 0.2em 0.7em;
-  border-radius: v.$radius-sm;
-  margin-left: 0.7em;
-}
-.badge-published {
-  background: v.$color-accent-soft;
-  color: v.$color-text;
-}
-.badge-draft {
-  background: v.$color-border;
-  color: v.$color-text-dim;
-}
-.scenario-form {
-  display: flex;
-  gap: 0.7em;
-  margin-top: 1em;
-}
-.scenario-form input {
-  flex: 1;
-  padding: 0.4em 0.8em;
-  border-radius: v.$radius-sm;
-  border: 1px solid v.$color-border;
-  background: v.$color-border;
-  color: v.$color-text-dim;
-}
-.scenario-form input::placeholder {
-  color: v.$color-accent;
-}
-.scenario-form button {
-  background: v.$color-accent;
-  color: v.$color-text;
-  border: none;
-  border-radius: v.$radius-sm;
-  padding: 0.4em 1em;
-  font-weight: 500;
-  cursor: pointer;
-}
-.error {
-  color: v.$color-accent;
-  margin-bottom: 1em;
-}
-</style>
+<!-- Styles locaux supprimés, sidebar.scss utilisé -->
 <style scoped>
 @import "@/src/styles/components/sidebar.scss";
 </style>
