@@ -48,8 +48,8 @@
             @toggleCommuneSelection="toggleCommuneSelection"
             @polygonReady="
               (id, layer) => {
-                polygonLayers.set(id, layer);
-                updatePolygonStyles();
+                setPolygonLayer(id, layer);
+                updatePolygonStyles(store);
               }
             "
           />
@@ -151,6 +151,7 @@ import { useScenarioStore } from "@/src/stores/scenario";
 import { LMap } from "@vue-leaflet/vue-leaflet";
 import { blockUtils, isBlockEmpty } from "@/src/composables/blockUtils";
 import { useToast } from "@/src/composables/useToast";
+import { useLeafletMap } from "@/src/composables/useLeafletMap";
 
 const communeShapes = ref([]);
 const showIntroAddMenu = ref(false);
@@ -433,7 +434,7 @@ function cancelChanges() {
   }
 }
 
-const polygonLayers = new Map(); // id -> leaflet layer
+const { polygonLayers, setPolygonLayer, updatePolygonStyles } = useLeafletMap();
 function toggleCommuneSelection(communeId) {
   const id = typeof communeId === "string" ? communeId : String(communeId);
   if (store.isCommuneSelected(id)) {
@@ -444,33 +445,9 @@ function toggleCommuneSelection(communeId) {
       communeShapes.value
     );
   }
-  updatePolygonStyles();
+  updatePolygonStyles(store);
 }
-function updatePolygonStyles() {
-  polygonLayers.forEach((layer, id) => {
-    if (!layer || typeof layer.setStyle !== "function") return;
-    const selected = store.isCommuneSelected(id);
-    layer.setStyle(
-      selected
-        ? {
-            color: "#f59e0b", // amber border
-            weight: 4,
-            opacity: 0.8,
-            fillColor: "#fde68a", // amber light fill
-            fillOpacity: 0.4,
-            cursor: "pointer",
-          }
-        : {
-            color: "#1976d2",
-            weight: 1,
-            opacity: 0.5,
-            fillColor: "#1976d2",
-            fillOpacity: 0.2,
-            cursor: "pointer",
-          }
-    );
-  });
-}
+// updatePolygonStyles est maintenant géré par le composable useLeafletMap
 </script>
 
 <style scoped>
