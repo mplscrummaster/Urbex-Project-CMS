@@ -75,6 +75,27 @@ export const useScenarioStore = defineStore("scenario", () => {
     // TODO: Appeler l'API pour sauvegarder l'ordre si nécessaire
   }
 
+  async function saveScenario(status) {
+    if (!scenarioDetails.value || !selectedScenario.value) return;
+    const scenarioId = selectedScenario.value.id;
+    const payload = {
+      ...scenarioDetails.value.scenario,
+      status,
+      missions: missions.value.map((m) => {
+        const { _open, ...rest } = m;
+        return rest;
+      }),
+      communes: communes.value,
+    };
+    try {
+      await axios.put(`${API_URL}/${scenarioId}`, payload);
+      // Optionnel: recharger le détail pour refléter la sauvegarde
+      await selectScenario(selectedScenario.value);
+    } catch (e) {
+      error.value = "Erreur lors de la sauvegarde.";
+    }
+  }
+
   return {
     scenarios,
     loading,
@@ -89,5 +110,6 @@ export const useScenarioStore = defineStore("scenario", () => {
     selectScenario,
     createScenario,
     reorderMissions,
+    saveScenario,
   };
 });
