@@ -1,4 +1,15 @@
 @use "../abstracts/variables" as *;
+// Harmonized input for MissionList.vue
+.mission-input {
+  background: $color-bg-alt;
+  color: $color-text;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  padding: 0.8rem 1.2rem;
+  width: 100%;
+  font-size: 1.15rem;
+  margin-bottom: 0.2rem;
+}
 
 body {
   font-family: "Inter", Arial, sans-serif;
@@ -92,11 +103,11 @@ form.scenario-form {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 .mission-block {
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  background: #212d4a;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  margin-bottom: 0;
+  padding: 1.2rem 1.5rem;
+  background: $color-surface;
+  border-radius: $radius-md;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 .block-text {
   margin-bottom: 1rem;
@@ -140,12 +151,14 @@ form.scenario-form {
 
 .collapsible-card {
   margin-bottom: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 0.5rem;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-surface;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   padding: 0;
 }
 .collapsible-header {
-  background-color: #23325a;
+  background-color: $color-bg-alt;
   margin: 0;
   padding: 0.5rem 1rem;
   cursor: pointer;
@@ -161,16 +174,16 @@ form.scenario-form {
   font-size: 1.2rem;
 }
 .block-item {
-  background: #16243a;
-  border: 1px solid #223b54;
-  border-radius: 0.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 0.7rem;
-  padding: 0.7rem 1.2rem;
+  background: $color-bg-alt;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+  padding: 1rem 1.5rem;
   width: 100%;
   display: flex;
-  align-items: stretch;
-  gap: 0.7rem;
+  align-items: center;
+  gap: 1rem;
   position: relative;
 }
 .block-drag-handle.material-symbols-rounded {
@@ -182,7 +195,7 @@ form.scenario-form {
   margin-left: auto !important;
   background: none;
   border: none;
-  color: #90caf9;
+  color: $color-accent;
   font-size: 1.6em;
   cursor: pointer;
   align-self: flex-start;
@@ -190,7 +203,7 @@ form.scenario-form {
   transition: color 0.2s;
 }
 .remove-block-btn:hover {
-  color: #e57373;
+  color: $color-danger;
 }
 .block-drag-handle.material-symbols-rounded {
   color: #90caf9;
@@ -204,14 +217,14 @@ form.scenario-form {
   width: 100%;
   border: none;
   resize: none;
-  padding: 0.5rem;
-  border-radius: 0.25rem;
-  background-color: #23325a;
-  color: #f5f7fa;
+  padding: 0.5rem 0.8rem;
+  border-radius: $radius-sm;
+  background-color: $color-surface;
+  color: $color-text;
 }
 .mission-block {
-  padding: 0.5rem 1rem;
-  border-top: 1px solid #ddd;
+  padding: 1rem 1.2rem;
+  border-top: 1px solid $color-border;
 }
 .mission-block div {
   margin-bottom: 0.5rem;
@@ -230,17 +243,17 @@ form.scenario-form {
 }
 input,
 textarea {
-  background: #212d4a;
-  color: #f5f7fa;
-  border: 1px solid #23325a;
-  border-radius: 0.3rem;
-  padding: 0.5rem;
+  background: $color-bg-alt;
+  color: $color-text;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  padding: 0.5rem 0.8rem;
 }
 button {
-  background: #3b82f6;
-  color: #fff;
+  background: $color-accent;
+  color: $color-text;
   border: none;
-  border-radius: 0.3rem;
+  border-radius: $radius-sm;
   padding: 0.5rem 1.2rem;
   cursor: pointer;
   font-weight: 600;

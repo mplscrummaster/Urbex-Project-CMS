@@ -107,31 +107,35 @@ const CARTO_ATTR = '&copy; <a href="https://carto.com/attributions">CARTO</a>';
     <template #item="{ element: mission, index: idx }">
       <div class="collapsible-card">
         <div class="collapsible-header" @click="emit('openCollapse', idx)">
-          <span
-            class="drag-handle material-symbols-rounded"
-            style="cursor: grab; margin-right: 0.7rem"
-            >drag_indicator</span
+          <div
+            style="display: flex; align-items: center; gap: 0.7rem; width: 100%"
           >
-          <h3>Mission {{ idx + 1 }} : {{ mission.title }}</h3>
-          <span class="material-symbols-rounded">{{
-            mission._open ? "expand_less" : "expand_more"
-          }}</span>
-          <button
-            class="remove-mission-btn"
-            style="
-              margin-left: auto;
-              background: none;
-              border: none;
-              cursor: pointer;
-              color: #e53935;
-            "
-            title="Supprimer la mission"
-            @click.stop="
-              emit('removeMission', mission._id_mission || mission.id)
-            "
-          >
-            <span class="material-symbols-rounded">delete</span>
-          </button>
+            <span
+              class="drag-handle material-symbols-rounded"
+              style="cursor: grab"
+              >drag_indicator</span
+            >
+            <h3 style="flex: 1">Mission {{ idx + 1 }} : {{ mission.title }}</h3>
+            <span class="material-symbols-rounded">{{
+              mission._open ? "expand_less" : "expand_more"
+            }}</span>
+            <button
+              class="remove-mission-btn"
+              style="
+                background: none;
+                border: none;
+                cursor: pointer;
+                color: #e53935;
+                margin-left: 0.7rem;
+              "
+              title="Supprimer la mission"
+              @click.stop="
+                emit('removeMission', mission._id_mission || mission.id)
+              "
+            >
+              <span class="material-symbols-rounded">delete</span>
+            </button>
+          </div>
         </div>
         <div v-if="mission._open">
           <div class="mission-block">
@@ -239,13 +243,8 @@ const CARTO_ATTR = '&copy; <a href="https://carto.com/attributions">CARTO</a>';
                 "
               >
                 <template #item="{ element: block }">
-                  <div
-                    class="block-item"
-                    style="display: flex; align-items: center; gap: 0.5rem"
-                  >
-                    <span
-                      class="block-drag-handle material-symbols-rounded"
-                      style="cursor: grab"
+                  <div class="block-item">
+                    <span class="block-drag-handle material-symbols-rounded"
                       >drag_indicator</span
                     >
                     <component
@@ -284,12 +283,12 @@ const CARTO_ATTR = '&copy; <a href="https://carto.com/attributions">CARTO</a>';
               <textarea
                 v-model="mission.riddle_text"
                 rows="2"
-                style="width: 100%"
+                class="mission-input"
               />
             </div>
             <div>
               <strong>Mot réponse :</strong>
-              <input v-model="mission.answer_word" />
+              <input v-model="mission.answer_word" class="mission-input" />
             </div>
           </div>
         </div>

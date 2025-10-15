@@ -68,10 +68,11 @@ watch(
 </script>
 
 <style scoped>
+@use "@/src/styles/abstracts/variables" as v;
 .sidebar {
-  background: #183a5a;
+  background: v.$color-bg-alt;
   padding: 2rem 1.5rem;
-  border-right: 1px solid #22476b;
+  border-right: 1px solid v.$color-border;
 }
 .scenario-list {
   list-style: none;
@@ -80,34 +81,34 @@ watch(
 }
 .scenario-item {
   padding: 0.7em 1em;
-  border-radius: 0.5em;
+  border-radius: v.$radius-sm;
   margin-bottom: 0.5em;
   cursor: pointer;
-  background: #22476b;
-  color: #e3e7f7;
+  background: v.$color-border;
+  color: v.$color-text-dim;
   transition: background 0.2s, color 0.2s;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 .scenario-item.active {
-  background: #3b82f6;
-  color: #fff;
+  background: v.$color-accent;
+  color: v.$color-text;
   font-weight: 600;
 }
 .scenario-status-badge {
   font-size: 0.85em;
   padding: 0.2em 0.7em;
-  border-radius: 0.5em;
+  border-radius: v.$radius-sm;
   margin-left: 0.7em;
 }
 .badge-published {
-  background: #42a5f5;
-  color: #fff;
+  background: v.$color-accent-soft;
+  color: v.$color-text;
 }
 .badge-draft {
-  background: #22476b;
-  color: #e3e7f7;
+  background: v.$color-border;
+  color: v.$color-text-dim;
 }
 .scenario-form {
   display: flex;
@@ -117,25 +118,28 @@ watch(
 .scenario-form input {
   flex: 1;
   padding: 0.4em 0.8em;
-  border-radius: 0.4em;
-  border: 1px solid #22476b;
-  background: #22476b;
-  color: #e3e7f7;
+  border-radius: v.$radius-sm;
+  border: 1px solid v.$color-border;
+  background: v.$color-border;
+  color: v.$color-text-dim;
 }
 .scenario-form input::placeholder {
-  color: #90caf9;
+  color: v.$color-accent;
 }
 .scenario-form button {
-  background: #6366f1;
-  color: #fff;
+  background: v.$color-accent;
+  color: v.$color-text;
   border: none;
-  border-radius: 0.4em;
+  border-radius: v.$radius-sm;
   padding: 0.4em 1em;
   font-weight: 500;
   cursor: pointer;
 }
 .error {
-  color: #f59e0b;
+  color: v.$color-accent;
   margin-bottom: 1em;
 }
+</style>
+<style scoped>
+@import "@/src/styles/components/sidebar.scss";
 </style>
