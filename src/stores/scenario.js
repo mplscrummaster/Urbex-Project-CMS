@@ -64,9 +64,56 @@ export const useScenarioStore = defineStore("scenario", () => {
   const detailsError = ref("");
   const missions = ref([]);
   const communes = ref([]);
+  const communeError = ref("");
   const API_URL = "http://localhost:3000/api/scenarios";
   const deletedMissionIds = ref([]);
   const deletedBlockIds = ref([]);
+
+  // Ajoute une commune par nom (case insensitive, max 3)
+  const addCommune = (name, shapes) => {
+    if (!name || !shapes) return;
+    const input = name.trim().toLowerCase();
+    const found = shapes.find((c) => {
+      const n = c.geojson?.properties?.name_fr
+        ?.toLowerCase()
+        .replace(/\s+/g, "");
+      return n === input.replace(/\s+/g, "");
+    });
+    if (!found) {
+      communeError.value = "Commune introuvable.";
+      return;
+    }
+    if (communes.value.some((c) => String(c.id) === String(found.id))) {
+      communeError.value = "Commune déjà sélectionnée.";
+      return;
+    }
+    if (communes.value.length >= 3) {
+      communeError.value = "Maximum 3 communes.";
+      return;
+    }
+    communes.value.push(mapCommune(found));
+    communeError.value = "";
+  };
+
+  // Supprime une commune par id
+  const removeCommune = (id) => {
+    communes.value = communes.value.filter((c) => String(c.id) !== String(id));
+    if (scenarioDetails.value) {
+      scenarioDetails.value.communes = communes.value;
+    }
+    communeError.value = "";
+  };
+
+  // Vérifie si une commune est sélectionnée
+  const isCommuneSelected = (id) => {
+    return communes.value.some((c) => String(c.id) === String(id));
+  };
+
+  // Retourne le nom d'une commune
+  const getCommuneName = (id, shapes) => {
+    const shape = shapes.find((c) => String(c.id) === String(id));
+    return shape?.geojson?.properties?.name_fr || `Commune ${id}`;
+  };
 
   const saveScenarioFull = async (status, token) => {
     // --- Publication complète du scénario ---
@@ -450,6 +497,11 @@ export const useScenarioStore = defineStore("scenario", () => {
     detailsError,
     missions,
     communes,
+    communeError,
+    addCommune,
+    removeCommune,
+    isCommuneSelected,
+    getCommuneName,
     fetchScenarios,
     selectScenario,
     createScenario,

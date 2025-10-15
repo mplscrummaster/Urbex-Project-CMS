@@ -94,7 +94,9 @@
               <button @click="addCommune" :disabled="!newCommuneName">
                 Ajouter
               </button>
-              <div v-if="communeError" class="error">{{ communeError }}</div>
+              <div v-if="store.communeError" class="error">
+                {{ store.communeError }}
+              </div>
             </div>
             <div v-else>
               <em>Maximum 3 communes liées.</em>
@@ -259,7 +261,10 @@ const editTitle = ref(false);
 const newTitle = ref("");
 const newCommuneName = ref("");
 // Synchronise la sélection initiale des communes liées au scénario
-const selectedCommuneIds = ref([]);
+import { computed } from "vue";
+const selectedCommuneIds = computed(() =>
+  store.communes.map((c) => String(c.id))
+);
 
 // Met à jour la sélection et la surbrillance au chargement du détail
 watch(
@@ -623,22 +628,20 @@ function cancelChanges() {
 const polygonLayers = new Map(); // id -> leaflet layer
 function toggleCommuneSelection(communeId) {
   const id = typeof communeId === "string" ? communeId : String(communeId);
-  const idx = selectedCommuneIds.value.findIndex((cid) => String(cid) === id);
-  if (idx === -1) {
-    if (selectedCommuneIds.value.length < 3) {
-      selectedCommuneIds.value.push(id);
-    }
+  if (store.isCommuneSelected(id)) {
+    store.removeCommune(id);
   } else {
-    selectedCommuneIds.value.splice(idx, 1);
+    store.addCommune(
+      store.getCommuneName(id, communeShapes.value),
+      communeShapes.value
+    );
   }
-  store.setSelectedCommunes(selectedCommuneIds.value);
-  // Met à jour le style du polygone sélectionné
   updatePolygonStyles();
 }
 function updatePolygonStyles() {
   polygonLayers.forEach((layer, id) => {
     if (!layer || typeof layer.setStyle !== "function") return;
-    const selected = selectedCommuneIds.value.includes(String(id));
+    const selected = store.isCommuneSelected(id);
     layer.setStyle(
       selected
         ? {
