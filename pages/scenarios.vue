@@ -66,87 +66,23 @@
               </button>
             </template>
           </div>
-          <div class="scenario-global-infos">
-            <h3>Communes liées</h3>
-            <div class="commune-pills">
-              <span
-                v-for="commune in store.communes"
-                :key="commune.id"
-                class="commune-pill"
-              >
-                {{ commune.name_fr }}
-                <button
-                  class="pill-remove"
-                  @click="store.removeCommune(commune.id)"
-                  title="Retirer la commune"
-                  type="button"
-                >
-                  &times;
-                </button>
-              </span>
-            </div>
-
-            <div v-if="store.communes.length < 3">
-              <input
-                v-model="newCommuneName"
-                placeholder="Ajouter une commune…"
-              />
-              <button
-                @click="() => store.addCommune(newCommuneName, communeShapes)"
-                :disabled="!newCommuneName"
-              >
-                Ajouter
-              </button>
-              <div v-if="store.communeError" class="error">
-                {{ store.communeError }}
-              </div>
-            </div>
-            <div v-else>
-              <em>Maximum 3 communes liées.</em>
-            </div>
-            <div class="commune-shapes-map" style="margin-top: 2rem">
-              <h4>Choix visuel des communes</h4>
-              <div v-if="communeShapes.length">
-                <LMap
-                  :zoom="7"
-                  :center="[50.5, 4.5]"
-                  :options="{ zoomControl: false, minZoom: 7, maxZoom: 18 }"
-                  style="
-                    height: 320px;
-                    width: 100%;
-                    border-radius: 0.5rem;
-                    overflow: hidden;
-                    background: #183a5a; /* bleu foncé custom */
-                  "
-                >
-                  <template v-for="feature in communeShapes" :key="feature.id">
-                    <LGeoJson
-                      :geojson="feature.geojson"
-                      :options="{
-                        style: () => ({
-                          color: '#1976d2',
-                          weight: 1,
-                          fillColor: '#1976d2',
-                          fillOpacity: 0.2,
-                          cursor: 'pointer',
-                        }),
-                      }"
-                      @ready="
-                        (layer) => {
-                          polygonLayers.set(feature.id, layer);
-                          updatePolygonStyles();
-                        }
-                      "
-                      @click="() => toggleCommuneSelection(feature.id)"
-                    />
-                  </template>
-                </LMap>
-              </div>
-              <div v-else style="padding: 1rem; color: #888">
-                Chargement des shapes…
-              </div>
-            </div>
-          </div>
+          <CommuneSelector
+            :communes="store.communes"
+            :communeShapes="communeShapes"
+            :communeError="store.communeError"
+            :maxCommunes="3"
+            :newCommuneName="newCommuneName"
+            @update:newCommuneName="(val) => (newCommuneName = val)"
+            @addCommune="(name) => store.addCommune(name, communeShapes)"
+            @removeCommune="(id) => store.removeCommune(id)"
+            @toggleCommuneSelection="toggleCommuneSelection"
+            @polygonReady="
+              (id, layer) => {
+                polygonLayers.set(id, layer);
+                updatePolygonStyles();
+              }
+            "
+          />
           <ScenarioIntro
             :blocks="store.scenarioDetails.introBlocks"
             :showIntro="showIntro"
@@ -251,10 +187,10 @@ import BlockAudio from "@/src/components/scenario-blocks/BlockAudio.vue";
 import ScenarioIntro from "@/src/components/scenario/ScenarioIntro.vue";
 import MissionList from "@/src/components/scenario/MissionList.vue";
 import ScenarioOutro from "@/src/components/scenario/ScenarioOutro.vue";
+import CommuneSelector from "@/src/components/CommuneSelector.vue";
 
 import { useScenarioStore } from "@/src/stores/scenario";
-import draggable from "vuedraggable";
-import { LMap, LTileLayer, LMarker } from "@vue-leaflet/vue-leaflet";
+import { LMap } from "@vue-leaflet/vue-leaflet";
 
 const communeShapes = ref([]);
 const showIntroAddMenu = ref(false);
@@ -326,38 +262,31 @@ function isBlockEmpty(block) {
 }
 
 // Utilitaires pour compatibilité structure API
-function getIntroBlocks() {
-  return (
-    store.scenarioDetails.introBlocks ||
-    store.scenarioDetails.intro_blocks ||
-    []
-  );
-}
-function getOutroBlocks() {
-  return (
-    store.scenarioDetails.outroBlocks ||
-    store.scenarioDetails.outro_blocks ||
-    []
-  );
-}
-function getMissionBlocks(mission) {
-  return mission.blocks || mission.mission_blocks || [];
-}
-
-function getBlockComponent(block) {
-  switch (block.type) {
-    case "text":
-      return BlockText;
-    case "image":
-      return BlockImage;
-    case "video":
-      return BlockVideo;
-    case "audio":
-      return BlockAudio;
-    default:
-      return BlockText;
-  }
-}
+const blockUtils = {
+  getIntroBlocks(details) {
+    return details.introBlocks || details.intro_blocks || [];
+  },
+  getOutroBlocks(details) {
+    return details.outroBlocks || details.outro_blocks || [];
+  },
+  getMissionBlocks(mission) {
+    return mission.blocks || mission.mission_blocks || [];
+  },
+  getBlockComponent(block) {
+    switch (block.type) {
+      case "text":
+        return BlockText;
+      case "image":
+        return BlockImage;
+      case "video":
+        return BlockVideo;
+      case "audio":
+        return BlockAudio;
+      default:
+        return BlockText;
+    }
+  },
+};
 
 // Initialisation des blocks dans chaque mission si absent
 onMounted(() => {
