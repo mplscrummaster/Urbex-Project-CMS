@@ -1,6 +1,6 @@
 <script setup>
 import draggable from "vuedraggable";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import BlockText from "@/src/components/scenario-blocks/BlockText.vue";
 import BlockImage from "@/src/components/scenario-blocks/BlockImage.vue";
 import BlockVideo from "@/src/components/scenario-blocks/BlockVideo.vue";
@@ -16,7 +16,20 @@ const emit = defineEmits([
   "addBlock",
   "removeBlock",
   "toggleAddMenu",
+  "update:blocks",
 ]);
+
+const localBlocks = ref([...props.blocks]);
+watch(
+  () => props.blocks,
+  (newVal) => {
+    localBlocks.value = [...newVal];
+  }
+);
+
+function onBlocksReorder() {
+  emit("update:blocks", localBlocks.value);
+}
 
 function getBlockComponent(block) {
   switch (block.type) {
@@ -44,10 +57,10 @@ function getBlockComponent(block) {
     <div v-if="props.showOutro">
       <div><strong>Blocs de contenu :</strong></div>
       <draggable
-        v-model="props.blocks"
+        v-model="localBlocks"
         item-key="id"
         handle=".block-drag-handle"
-        @end="() => {}"
+        @end="onBlocksReorder"
       >
         <template #item="{ element: block }">
           <div
@@ -62,7 +75,7 @@ function getBlockComponent(block) {
             <component
               :is="getBlockComponent(block)"
               :block="block"
-              @remove="emit('removeBlock', block.id)"
+              @remove="emit('removeBlock', $event)"
             />
           </div>
         </template>

@@ -9,7 +9,12 @@ const emit = defineEmits(["remove"]);
     <button
       class="remove-block-btn"
       style="margin-left: auto"
-      @click="emit('remove')"
+      @click="
+        () => {
+          console.log('Suppression demandée pour bloc', props.block);
+          emit('remove', props.block._id_block || props.block.id);
+        }
+      "
     >
       <span class="material-symbols-rounded">delete</span>
     </button>

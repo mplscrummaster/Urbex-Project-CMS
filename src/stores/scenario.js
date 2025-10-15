@@ -12,14 +12,40 @@ export const useScenarioStore = defineStore("scenario", () => {
   const detailsError = ref("");
   const missions = ref([]);
   const communes = ref([]);
-
   const API_URL = "http://localhost:3000/api/scenarios";
+  const deletedMissionIds = ref([]);
+  const deletedBlockIds = ref([]);
 
   async function saveScenarioFull(status, token) {
+    // Supprimer les missions supprimées côté front
+    if (deletedMissionIds.value?.length) {
+      for (const missionId of deletedMissionIds.value) {
+        try {
+          await axios.delete(
+            `http://localhost:3000/api/missions/${missionId}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } catch (e) {
+          console.error("Erreur suppression mission", missionId, e);
+        }
+      }
+      deletedMissionIds.value = [];
+    }
+    // Supprimer les blocs supprimés côté front
+    if (deletedBlockIds.value?.length) {
+      for (const blockId of deletedBlockIds.value) {
+        try {
+          await axios.delete(`http://localhost:3000/api/blocks/${blockId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        } catch (e) {
+          console.error("Erreur suppression bloc", blockId, e);
+        }
+      }
+      deletedBlockIds.value = [];
+    }
     if (!scenarioDetails.value || !selectedScenario.value) return;
     const scenarioId = selectedScenario.value.id;
-    console.log("Token utilisé pour la requête:", token);
-    // 1. Mettre à jour le scénario (titre, statut)
     await axios.put(
       `${API_URL}/${scenarioId}`,
       {
@@ -28,8 +54,6 @@ export const useScenarioStore = defineStore("scenario", () => {
       },
       { headers: { Authorization: `Bearer ${token}` } }
     );
-
-    // 2. Mettre à jour les missions
     for (const m of missions.value) {
       const missionId = m._id_mission || m.id;
       if (!missionId) continue;
@@ -46,8 +70,6 @@ export const useScenarioStore = defineStore("scenario", () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
     }
-
-    // 3. Mettre à jour les prérequis des missions
     for (const m of missions.value) {
       const missionId = m._id_mission || m.id;
       if (!missionId) continue;
@@ -61,8 +83,6 @@ export const useScenarioStore = defineStore("scenario", () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
     }
-
-    // 4. Mettre à jour l'ordre des missions
     await axios.put(
       `http://localhost:3000/api/scenarios/${scenarioId}/missions/reorder`,
       missions.value.map((m, idx) => ({
@@ -71,8 +91,6 @@ export const useScenarioStore = defineStore("scenario", () => {
       })),
       { headers: { Authorization: `Bearer ${token}` } }
     );
-
-    // 5. Mettre à jour les communes liées
     await axios.post(
       `http://localhost:3000/api/scenarios/${scenarioId}/communes`,
       {
@@ -80,29 +98,24 @@ export const useScenarioStore = defineStore("scenario", () => {
       },
       { headers: { Authorization: `Bearer ${token}` } }
     );
-
-    // 6. Mettre à jour les blocs (intro, outro, mission)
     const allBlocks = [
       ...(scenarioDetails.value.introBlocks || []),
       ...(scenarioDetails.value.outroBlocks || []),
       ...missions.value.flatMap((m) => m.blocks || []),
     ];
     for (const b of allBlocks) {
+      let ownerType = b.owner_type || b.type_owner;
+      if (!ownerType && b._id_mission) ownerType = "mission";
+      if (!ownerType && b._id_scenario) ownerType = "scenario_intro";
+      let missionId = b._id_mission || b.mission_id;
+      let scenarioIdBlock = b._id_scenario || scenarioId;
       let blockId = b._id_block || b.id;
-      // Si l'id est temporaire (pas un entier), créer le bloc
-      console.log("typeof blockId ", typeof blockId);
-
       if (!blockId || typeof blockId !== "number") {
         try {
           let res;
-          if (b.owner_type === "scenario_intro") {
-            console.log(
-              "POST bloc intro",
-              `http://localhost:3000/api/scenarios/${scenarioId}/intro/blocks`,
-              b
-            );
+          if (ownerType === "scenario_intro") {
             res = await axios.post(
-              `http://localhost:3000/api/scenarios/${scenarioId}/intro/blocks`,
+              `http://localhost:3000/api/scenarios/${scenarioIdBlock}/intro/blocks`,
               {
                 position_block: b.position,
                 type_block: b.type,
@@ -112,14 +125,9 @@ export const useScenarioStore = defineStore("scenario", () => {
               },
               { headers: { Authorization: `Bearer ${token}` } }
             );
-          } else if (b.owner_type === "scenario_outro") {
-            console.log(
-              "POST bloc outro",
-              `http://localhost:3000/api/scenarios/${scenarioId}/outro/blocks`,
-              b
-            );
+          } else if (ownerType === "scenario_outro") {
             res = await axios.post(
-              `http://localhost:3000/api/scenarios/${scenarioId}/outro/blocks`,
+              `http://localhost:3000/api/scenarios/${scenarioIdBlock}/outro/blocks`,
               {
                 position_block: b.position,
                 type_block: b.type,
@@ -129,14 +137,9 @@ export const useScenarioStore = defineStore("scenario", () => {
               },
               { headers: { Authorization: `Bearer ${token}` } }
             );
-          } else if (b.owner_type === "mission" && b._id_mission) {
-            console.log(
-              "POST bloc mission",
-              `http://localhost:3000/api/missions/${b._id_mission}/blocks`,
-              b
-            );
+          } else if (ownerType === "mission" && missionId) {
             res = await axios.post(
-              `http://localhost:3000/api/missions/${b._id_mission}/blocks`,
+              `http://localhost:3000/api/missions/${missionId}/blocks`,
               {
                 position_block: b.position,
                 type_block: b.type,
@@ -147,13 +150,10 @@ export const useScenarioStore = defineStore("scenario", () => {
               { headers: { Authorization: `Bearer ${token}` } }
             );
           } else {
-            console.error("Type de bloc inconnu ou mission manquante", b);
-            error.value = "Type de bloc inconnu ou mission manquante.";
+            error.value = "Type de bloc ou parent inconnu.";
             continue;
           }
-          console.log("Réponse POST bloc:", res?.data, b);
           if (!res?.data?.id || typeof res.data.id !== "number") {
-            console.error("POST bloc n'a pas renvoyé d'id réel", res?.data, b);
             error.value = "Erreur création bloc : id non retourné.";
             continue;
           }
@@ -161,48 +161,47 @@ export const useScenarioStore = defineStore("scenario", () => {
           b._id_block = blockId;
           b.id = blockId;
         } catch (e) {
-          console.error("Erreur création bloc POST", b, e);
           error.value = "Erreur création bloc.";
           continue;
         }
       }
       if (!blockId || typeof blockId !== "number") {
-        console.error("PUT ignoré : id bloc non valide", b);
         continue;
       }
-      await axios.put(
-        `http://localhost:3000/api/blocks/${blockId}`,
-        {
-          position_block: b.position,
-          type_block: b.type,
-          content_text: b.content_text,
-          url_media: b.url_media,
-          caption: b.caption,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      try {
+        await axios.put(
+          `http://localhost:3000/api/blocks/${blockId}`,
+          {
+            position_block: b.position,
+            type_block: b.type,
+            content_text: b.content_text,
+            url_media: b.url_media,
+            caption: b.caption,
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } catch (e) {
+        error.value = "Erreur mise à jour bloc.";
+        continue;
+      }
     }
-
-    // 7. Mettre à jour l'ordre des blocs
     if (scenarioDetails.value.introBlocks?.length) {
+      const blockIds = scenarioDetails.value.introBlocks.map(
+        (b) => b._id_block || b.id
+      );
       await axios.put(
         `http://localhost:3000/api/scenarios/${scenarioId}/intro/blocks/reorder`,
-        {
-          blockIds: scenarioDetails.value.introBlocks.map(
-            (b) => b._id_block || b.id
-          ),
-        },
+        { blockIds },
         { headers: { Authorization: `Bearer ${token}` } }
       );
     }
     if (scenarioDetails.value.outroBlocks?.length) {
+      const blockIds = scenarioDetails.value.outroBlocks.map(
+        (b) => b._id_block || b.id
+      );
       await axios.put(
         `http://localhost:3000/api/scenarios/${scenarioId}/outro/blocks/reorder`,
-        {
-          blockIds: scenarioDetails.value.outroBlocks.map(
-            (b) => b._id_block || b.id
-          ),
-        },
+        { blockIds },
         { headers: { Authorization: `Bearer ${token}` } }
       );
     }
@@ -226,7 +225,6 @@ export const useScenarioStore = defineStore("scenario", () => {
         }
       }
     }
-    // Optionnel: recharger le détail pour refléter la sauvegarde
     await selectScenario(selectedScenario.value, token);
   }
 
@@ -255,8 +253,9 @@ export const useScenarioStore = defineStore("scenario", () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       scenarioDetails.value = res.data;
-      missions.value = scenarioDetails.value.missions.map((m) => ({
+      missions.value = scenarioDetails.value.missions.map((m, idx) => ({
         ...m,
+        id: m._id_mission || m.id || idx + 1,
         title: m.title_mission || m.title,
         prerequisites: Array.isArray(m.prerequisites)
           ? m.prerequisites.map((p) =>
@@ -272,7 +271,6 @@ export const useScenarioStore = defineStore("scenario", () => {
         _open: false,
       }));
       communes.value = scenarioDetails.value.communes || [];
-      // Correction: si l'id est absent, utiliser _id_commune
       communes.value = (scenarioDetails.value.communes || []).map((c) => ({
         id: c.id ?? c._id_commune,
         name_fr: c.name_fr,
@@ -280,7 +278,6 @@ export const useScenarioStore = defineStore("scenario", () => {
         name_de: c.name_de,
         ...c,
       }));
-      // Correction mapping intro/outro blocks
       scenarioDetails.value.introBlocks = (
         scenarioDetails.value.introBlocks ||
         scenarioDetails.value.intro_blocks ||
@@ -340,7 +337,6 @@ export const useScenarioStore = defineStore("scenario", () => {
     };
     try {
       await axios.put(`${API_URL}/${scenarioId}`, payload);
-      // Optionnel: recharger le détail pour refléter la sauvegarde
       await selectScenario(selectedScenario.value);
     } catch (e) {
       error.value = "Erreur lors de la sauvegarde.";
@@ -348,10 +344,8 @@ export const useScenarioStore = defineStore("scenario", () => {
   }
 
   function setSelectedCommunes(communeIds) {
-    // Récupère le vrai nom depuis communeShapes si possible
     let shapes = [];
     try {
-      // Accès direct à communeShapes depuis le module principal
       shapes = require("@/src/pages/scenarios.vue").communeShapes?.value || [];
     } catch (e) {
       if (
@@ -390,5 +384,7 @@ export const useScenarioStore = defineStore("scenario", () => {
     saveScenario,
     setSelectedCommunes,
     saveScenarioFull,
+    deletedMissionIds,
+    deletedBlockIds,
   };
 });

@@ -16,16 +16,41 @@ const emit = defineEmits([
   "openCollapse",
   "addBlock",
   "removeBlock",
+  "update:blocks",
+  "removeMission",
 ]);
 
-function togglePrerequisite(mission, prev) {
-  const id = Number(prev.id);
+function onOrderChange(e) {
+  emit("orderChange", e.newList || props.missions);
+}
+
+function togglePrerequisite(mission, prev, idx) {
+  const prereqId = Number(prev.id);
   if (!Array.isArray(mission.prerequisites)) mission.prerequisites = [];
-  const idx = mission.prerequisites.map(Number).indexOf(id);
-  if (idx === -1) {
-    mission.prerequisites.push(id);
+  console.log(
+    props.missions.map((m, i) => ({
+      index: i,
+      id: m.id ?? m._id_mission,
+      prerequisites: m.prerequisites ? [...m.prerequisites] : [],
+    }))
+  );
+  const isActive = mission.prerequisites.map(Number).includes(prereqId);
+  if (!isActive) {
+    // Ajoute le prérequis à la mission courante et toutes les suivantes
+    for (let i = idx; i < props.missions.length; i++) {
+      const m = props.missions[i];
+      if (!Array.isArray(m.prerequisites)) m.prerequisites = [];
+      if (!m.prerequisites.map(Number).includes(prereqId)) {
+        m.prerequisites.push(prereqId);
+      }
+    }
   } else {
-    mission.prerequisites.splice(idx, 1);
+    // Retire le prérequis de la mission courante et toutes les précédentes
+    for (let i = 0; i <= idx; i++) {
+      const m = props.missions[i];
+      if (!Array.isArray(m.prerequisites)) m.prerequisites = [];
+      m.prerequisites = m.prerequisites.filter((id) => Number(id) !== prereqId);
+    }
   }
 }
 
@@ -68,6 +93,22 @@ const CARTO_ATTR = '&copy; <a href="https://carto.com/attributions">CARTO</a>';
           <span class="material-symbols-rounded">{{
             mission._open ? "expand_less" : "expand_more"
           }}</span>
+          <button
+            class="remove-mission-btn"
+            style="
+              margin-left: auto;
+              background: none;
+              border: none;
+              cursor: pointer;
+              color: #e53935;
+            "
+            title="Supprimer la mission"
+            @click.stop="
+              emit('removeMission', mission._id_mission || mission.id)
+            "
+          >
+            <span class="material-symbols-rounded">delete</span>
+          </button>
         </div>
         <div v-if="mission._open">
           <div class="mission-block">
@@ -135,16 +176,28 @@ const CARTO_ATTR = '&copy; <a href="https://carto.com/attributions">CARTO</a>';
                       .includes(Number(prev.id)),
                   }"
                   @click="togglePrerequisite(mission, prev, idx)"
-                  style="
-                    cursor: pointer;
-                    user-select: none;
-                    margin-right: 0.5em;
-                  "
+                  :style="{
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    marginRight: '0.5em',
+                    padding: '0.3em 0.8em',
+                    borderRadius: '1em',
+                    background: mission.prerequisites
+                      ?.map(Number)
+                      .includes(Number(prev.id))
+                      ? '#1976d2'
+                      : '#eee',
+                    color: mission.prerequisites
+                      ?.map(Number)
+                      .includes(Number(prev.id))
+                      ? '#fff'
+                      : '#333',
+                    border: 'none',
+                  }"
                 >
                   {{
                     prev.title || `Mission ${props.missions.indexOf(prev) + 1}`
                   }}
-                  <!-- ✔ retiré, pill active = couleur uniquement -->
                 </span>
               </div>
             </div>
@@ -154,7 +207,13 @@ const CARTO_ATTR = '&copy; <a href="https://carto.com/attributions">CARTO</a>';
                 v-model="mission.blocks"
                 item-key="id"
                 handle=".block-drag-handle"
-                @end="() => {}"
+                @end="
+                  () =>
+                    emit('update:blocks', {
+                      blocks: mission.blocks,
+                      missionIdx: idx,
+                    })
+                "
               >
                 <template #item="{ element: block }">
                   <div
@@ -169,7 +228,7 @@ const CARTO_ATTR = '&copy; <a href="https://carto.com/attributions">CARTO</a>';
                     <component
                       :is="getBlockComponent(block)"
                       :block="block"
-                      @remove="emit('removeBlock', block.id, mission)"
+                      @remove="emit('removeBlock', $event, mission)"
                     />
                   </div>
                 </template>
@@ -215,35 +274,3 @@ const CARTO_ATTR = '&copy; <a href="https://carto.com/attributions">CARTO</a>';
     </template>
   </draggable>
 </template>
-
-<style scoped>
-.prereq-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-.prereq-pill {
-  display: inline-flex;
-  align-items: center;
-  background: #e3e7f7;
-  color: #183a5a;
-  border-radius: 999px;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.95em;
-  font-weight: 500;
-  box-shadow: 0 1px 4px rgba(24, 58, 90, 0.07);
-  position: relative;
-  transition: background 0.2s, color 0.2s;
-}
-.prereq-pill.active {
-  background: #6366f1;
-  color: #fff;
-  opacity: 1;
-}
-.prereq-pill:not(.active) {
-  background: #6366f1;
-  color: #fff;
-  opacity: 0.4;
-}
-</style>
