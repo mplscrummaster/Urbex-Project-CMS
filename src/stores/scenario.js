@@ -1,3 +1,55 @@
+/**
+ * Publication complète du scénario (missions, blocs, communes, etc.)
+ * @param {string} status - 'published' ou autre
+ * @param {string} token - JWT utilisateur
+ * @returns {Promise<void>}
+ */
+/**
+ * Normalise une commune reçue de l'API
+ * @param {object} c
+ * @returns {object}
+ */
+const mapCommune = (c) => ({
+  id: c.id ?? c._id_commune,
+  name_fr:
+    c.geojson?.properties?.name_fr ||
+    c.name_fr ||
+    `Commune ${c.id ?? c._id_commune}`,
+  name_nl: c.name_nl,
+  name_de: c.name_de,
+  ...c,
+});
+// --- Gestion centralisée des erreurs ---
+const handleApiError = (e, context = "") => {
+  console.error(`Erreur ${context}:`, e);
+  error.value = `Erreur ${context}`;
+};
+// --- Helpers ---
+/**
+ * Normalise une mission reçue de l'API
+ */
+const mapMission = (m, idx) => ({
+  ...m,
+  id: m._id_mission || m.id || idx + 1,
+  title: m.title_mission || m.title,
+  prerequisites: Array.isArray(m.prerequisites)
+    ? m.prerequisites.map((p) =>
+        typeof p === "object" && p._id_mission_required
+          ? p._id_mission_required
+          : p
+      )
+    : [],
+  blocks: (m.blocks || m.mission_blocks || []).map(mapBlock),
+  _open: false,
+});
+
+/**
+ * Normalise un bloc reçu de l'API
+ */
+const mapBlock = (b) => ({
+  ...b,
+  type: b.type || b.type_block,
+});
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import axios from "axios";
@@ -16,22 +68,24 @@ export const useScenarioStore = defineStore("scenario", () => {
   const deletedMissionIds = ref([]);
   const deletedBlockIds = ref([]);
 
-  async function saveScenarioFull(status, token) {
-    // Supprimer les missions supprimées côté front
+  const saveScenarioFull = async (status, token) => {
+    // --- Publication complète du scénario ---
+    // Suppression missions et blocs supprimés côté front
     if (deletedMissionIds.value?.length) {
       for (const missionId of deletedMissionIds.value) {
         try {
           await axios.delete(
             `http://localhost:3000/api/missions/${missionId}`,
-            { headers: { Authorization: `Bearer ${token}` } }
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
           );
         } catch (e) {
-          console.error("Erreur suppression mission", missionId, e);
+          handleApiError(e, `suppression mission ${missionId}`);
         }
       }
       deletedMissionIds.value = [];
     }
-    // Supprimer les blocs supprimés côté front
     if (deletedBlockIds.value?.length) {
       for (const blockId of deletedBlockIds.value) {
         try {
@@ -39,7 +93,7 @@ export const useScenarioStore = defineStore("scenario", () => {
             headers: { Authorization: `Bearer ${token}` },
           });
         } catch (e) {
-          console.error("Erreur suppression bloc", blockId, e);
+          handleApiError(e, `suppression bloc ${blockId}`);
         }
       }
       deletedBlockIds.value = [];
@@ -82,6 +136,16 @@ export const useScenarioStore = defineStore("scenario", () => {
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      /**
+       * Pinia store pour la gestion des scénarios urbex
+       * - Synchronisation backend (missions, blocs, communes)
+       * - Mapping helpers pour missions, blocs, communes
+       * - Centralisation de la gestion des erreurs
+       * - Propagation des prérequis et sélection des communes
+       *
+       * Technologies : Nuxt 3, Vue 3, Pinia
+       * Auteur : Louis Janquart & GitHub Copilot
+       */
     }
     await axios.put(
       `http://localhost:3000/api/scenarios/${scenarioId}/missions/reorder`,
@@ -226,9 +290,16 @@ export const useScenarioStore = defineStore("scenario", () => {
       }
     }
     await selectScenario(selectedScenario.value, token);
-  }
+  };
 
-  async function fetchScenarios(userId, token) {
+  const fetchScenarios = async (userId, token) => {
+    /**
+     * Récupère tous les scénarios de l'utilisateur
+     * @param {string|number} userId
+     * @param {string} token
+     * @returns {Promise<void>}
+     */
+    // --- Récupère tous les scénarios de l'utilisateur ---
     loading.value = true;
     error.value = "";
     try {
@@ -237,13 +308,19 @@ export const useScenarioStore = defineStore("scenario", () => {
       });
       scenarios.value = Array.isArray(res.data) ? res.data : [];
     } catch (e) {
-      error.value = "Erreur de chargement des scénarios.";
+      handleApiError(e, "chargement des scénarios");
     } finally {
       loading.value = false;
     }
-  }
+  };
 
-  async function selectScenario(s, token) {
+  const selectScenario = async (s, token) => {
+    /**
+     * Sélectionne et charge un scénario complet
+     * @param {object} s - Scénario
+     * @param {string} token
+     * @returns {Promise<void>}
+     */
     selectedScenario.value = s;
     scenarioDetails.value = null;
     detailsError.value = "";
@@ -253,55 +330,35 @@ export const useScenarioStore = defineStore("scenario", () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       scenarioDetails.value = res.data;
-      missions.value = scenarioDetails.value.missions.map((m, idx) => ({
-        ...m,
-        id: m._id_mission || m.id || idx + 1,
-        title: m.title_mission || m.title,
-        prerequisites: Array.isArray(m.prerequisites)
-          ? m.prerequisites.map((p) =>
-              typeof p === "object" && p._id_mission_required
-                ? p._id_mission_required
-                : p
-            )
-          : [],
-        blocks: (m.blocks || m.mission_blocks || []).map((b) => ({
-          ...b,
-          type: b.type || b.type_block,
-        })),
-        _open: false,
-      }));
-      communes.value = scenarioDetails.value.communes || [];
-      communes.value = (scenarioDetails.value.communes || []).map((c) => ({
-        id: c.id ?? c._id_commune,
-        name_fr: c.name_fr,
-        name_nl: c.name_nl,
-        name_de: c.name_de,
-        ...c,
-      }));
+      missions.value = scenarioDetails.value.missions.map(mapMission);
+      communes.value = (scenarioDetails.value.communes || []).map(mapCommune);
       scenarioDetails.value.introBlocks = (
         scenarioDetails.value.introBlocks ||
         scenarioDetails.value.intro_blocks ||
         []
-      ).map((b) => ({
-        ...b,
-        type: b.type || b.type_block,
-      }));
+      ).map(mapBlock);
       scenarioDetails.value.outroBlocks = (
         scenarioDetails.value.outroBlocks ||
         scenarioDetails.value.outro_blocks ||
         []
-      ).map((b) => ({
-        ...b,
-        type: b.type || b.type_block,
-      }));
+      ).map(mapBlock);
     } catch (e) {
+      handleApiError(e, "chargement du détail du scénario");
       detailsError.value = "Erreur de chargement du détail du scénario.";
     } finally {
       detailsLoading.value = false;
     }
-  }
+  };
 
-  async function createScenario(title, userId, token) {
+  const createScenario = async (title, userId, token) => {
+    /**
+     * Crée un nouveau scénario
+     * @param {string} title
+     * @param {string|number} userId
+     * @param {string} token
+     * @returns {Promise<void>}
+     */
+    // --- Crée un nouveau scénario ---
     try {
       const res = await axios.post(
         API_URL,
@@ -310,20 +367,32 @@ export const useScenarioStore = defineStore("scenario", () => {
       );
       scenarios.value.push(res.data);
     } catch (e) {
-      error.value = "Erreur lors de la création.";
+      handleApiError(e, "création scénario");
     }
-  }
+  };
 
-  function reorderMissions(newOrder) {
+  const reorderMissions = (newOrder) => {
+    /**
+     * Réordonne les missions localement
+     * @param {Array} newOrder
+     * @returns {void}
+     */
+    // --- Réordonne les missions localement ---
     missions.value = [...newOrder];
     missions.value.forEach((mission, idx) => {
       mission.position = idx + 1;
     });
     scenarioDetails.value.missions = [...missions.value];
     // TODO: Appeler l'API pour sauvegarder l'ordre si nécessaire
-  }
+  };
 
-  async function saveScenario(status) {
+  const saveScenario = async (status) => {
+    /**
+     * Sauvegarde rapide du scénario (sans suppression)
+     * @param {string} status
+     * @returns {Promise<void>}
+     */
+    // --- Sauvegarde rapide du scénario (sans suppression) ---
     if (!scenarioDetails.value || !selectedScenario.value) return;
     const scenarioId = selectedScenario.value.id;
     const payload = {
@@ -339,11 +408,17 @@ export const useScenarioStore = defineStore("scenario", () => {
       await axios.put(`${API_URL}/${scenarioId}`, payload);
       await selectScenario(selectedScenario.value);
     } catch (e) {
-      error.value = "Erreur lors de la sauvegarde.";
+      handleApiError(e, "sauvegarde scénario");
     }
-  }
+  };
 
-  function setSelectedCommunes(communeIds) {
+  const setSelectedCommunes = (communeIds) => {
+    /**
+     * Met à jour la sélection des communes
+     * @param {Array} communeIds
+     * @returns {void}
+     */
+    // --- Met à jour la sélection des communes ---
     let shapes = [];
     try {
       shapes = require("@/src/pages/scenarios.vue").communeShapes?.value || [];
@@ -358,14 +433,12 @@ export const useScenarioStore = defineStore("scenario", () => {
     }
     communes.value = communeIds.map((id) => {
       const shape = shapes.find((c) => String(c.id) === String(id));
-      return shape && shape.geojson?.properties?.name_fr
-        ? { id, name_fr: shape.geojson.properties.name_fr }
-        : { id, name_fr: `Commune ${id}` };
+      return shape ? mapCommune(shape) : { id, name_fr: `Commune ${id}` };
     });
     if (scenarioDetails.value) {
       scenarioDetails.value.communes = communes.value;
     }
-  }
+  };
 
   return {
     scenarios,
