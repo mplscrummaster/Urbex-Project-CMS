@@ -41,11 +41,11 @@
             @addCommune="
               (name) => {
                 store.addCommune(name, communeShapes);
-                updatePolygonStyles();
+                updatePolygonStyles(store);
               }
             "
-            @removeCommune="(id) => store.removeCommune(id)"
-            @toggleCommuneSelection="toggleCommuneSelection"
+            @removeCommune="(id) => { store.removeCommune(id); updatePolygonStyles(store); }"
+            @toggleCommuneSelection="(id) => { toggleCommuneSelection(id); updatePolygonStyles(store); }"
             @polygonReady="
               (id, layer) => {
                 setPolygonLayer(id, layer);
@@ -131,21 +131,58 @@ async function removeMission(missionId) {
   );
   store.deletedMissionIds.push(missionId);
 }
-// Fonction utilitaire pour savoir si un bloc est vide
-import { LGeoJson } from "@vue-leaflet/vue-leaflet";
-import axios from "axios";
-import { ref, onMounted, watch, nextTick } from "vue";
+// Sous-composants principaux
+/**
+ * ScenarioListSidebar
+ * Props: scenarios, selectedScenario, loading, error
+ * Events: selectScenario(scenario), createScenario(title)
+ */
+import ScenarioListSidebar from "@/src/components/ScenarioListSidebar.vue";
+/**
+ * ScenarioTitleEditor
+ * Props: title, editTitle
+ * Events: edit(), save(newTitle)
+ */
+import ScenarioTitleEditor from "@/src/components/ScenarioTitleEditor.vue";
+/**
+ * CommuneSelector
+ * Props: communes, communeShapes, communeError, maxCommunes, newCommuneName
+ * Events: update:newCommuneName(val), addCommune(name), removeCommune(id), toggleCommuneSelection(id), polygonReady(id, layer)
+ */
+import CommuneSelector from "@/src/components/CommuneSelector.vue";
+/**
+ * ScenarioActions
+ * Props: isPublished
+ * Events: cancel(), saveDraft(), savePublish()
+ */
+import ScenarioActions from "@/src/components/ScenarioActions.vue";
+/**
+ * ScenarioIntro
+ * Props: blocks, showIntro, showIntroAddMenu
+ * Events: toggleIntro(), addBlock(type), removeBlock(id), toggleAddMenu(), update:blocks(blocks)
+ */
+import ScenarioIntro from "@/src/components/scenario/ScenarioIntro.vue";
+/**
+ * MissionList
+ * Props: missions
+ * Events: orderChange(), openCollapse(idx), addBlock(type, mission), removeBlock(id, mission), removeMission(id), update:blocks({blocks, missionIdx})
+ */
+import MissionList from "@/src/components/scenario/MissionList.vue";
+/**
+ * ScenarioOutro
+ * Props: blocks, showOutro, showOutroAddMenu
+ * Events: toggleOutro(), addBlock(type), removeBlock(id), toggleAddMenu(), update:blocks(blocks)
+ */
+import ScenarioOutro from "@/src/components/scenario/ScenarioOutro.vue";
+// Blocs
 import BlockText from "@/src/components/scenario-blocks/BlockText.vue";
 import BlockImage from "@/src/components/scenario-blocks/BlockImage.vue";
 import BlockVideo from "@/src/components/scenario-blocks/BlockVideo.vue";
 import BlockAudio from "@/src/components/scenario-blocks/BlockAudio.vue";
-import ScenarioIntro from "@/src/components/scenario/ScenarioIntro.vue";
-import MissionList from "@/src/components/scenario/MissionList.vue";
-import ScenarioOutro from "@/src/components/scenario/ScenarioOutro.vue";
-import CommuneSelector from "@/src/components/CommuneSelector.vue";
-import ScenarioActions from "@/src/components/ScenarioActions.vue";
-import ScenarioTitleEditor from "@/src/components/ScenarioTitleEditor.vue";
-import ScenarioListSidebar from "@/src/components/ScenarioListSidebar.vue";
+// Utilitaires
+import { LGeoJson } from "@vue-leaflet/vue-leaflet";
+import axios from "axios";
+import { ref, onMounted, watch, nextTick } from "vue";
 
 import { useScenarioStore } from "@/src/stores/scenario";
 import { LMap } from "@vue-leaflet/vue-leaflet";
@@ -188,7 +225,7 @@ const selectedGeoJsonStyle = {
 watch(
   () => store.communes,
   () => {
-    updatePolygonStyles();
+    updatePolygonStyles(store);
   }
 );
 
@@ -451,36 +488,4 @@ function toggleCommuneSelection(communeId) {
 </script>
 
 <style scoped>
-.commune-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-.commune-pill {
-  display: inline-flex;
-  align-items: center;
-  background: #e3e7f7;
-  color: #183a5a;
-  border-radius: 999px;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.95em;
-  font-weight: 500;
-  box-shadow: 0 1px 4px rgba(24, 58, 90, 0.07);
-  position: relative;
-}
-.pill-remove {
-  background: none;
-  border: none;
-  color: #6366f1;
-  font-size: 1.1em;
-  margin-left: 0.5em;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  transition: color 0.2s;
-}
-.pill-remove:hover {
-  color: #d32f2f;
-}
 </style>

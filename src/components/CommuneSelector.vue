@@ -85,6 +85,39 @@ const props = defineProps({
 </script>
 
 <style scoped>
+/* Pills communes - dark mode */
+.commune-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.commune-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #22476b;
+  color: #e3e7f7;
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.95em;
+  font-weight: 500;
+  box-shadow: 0 1px 4px rgba(24, 58, 90, 0.07);
+  position: relative;
+}
+.pill-remove {
+  background: none;
+  border: none;
+  color: #90caf9;
+  font-size: 1.1em;
+  margin-left: 0.5em;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.2s;
+}
+.pill-remove:hover {
+  color: #f59e0b;
+}
 .commune-selector .commune-pills {
   display: flex;
   flex-wrap: wrap;
