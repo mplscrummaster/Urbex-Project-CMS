@@ -77,7 +77,7 @@
                 {{ commune.name_fr }}
                 <button
                   class="pill-remove"
-                  @click="removeCommune(commune.id)"
+                  @click="store.removeCommune(commune.id)"
                   title="Retirer la commune"
                   type="button"
                 >
@@ -91,7 +91,10 @@
                 v-model="newCommuneName"
                 placeholder="Ajouter une commune…"
               />
-              <button @click="addCommune" :disabled="!newCommuneName">
+              <button
+                @click="() => store.addCommune(newCommuneName, communeShapes)"
+                :disabled="!newCommuneName"
+              >
                 Ajouter
               </button>
               <div v-if="store.communeError" class="error">
@@ -105,11 +108,6 @@
               <h4>Choix visuel des communes</h4>
               <div v-if="communeShapes.length">
                 <LMap
-                  :key="
-                    selectedCommuneIds.value
-                      ? selectedCommuneIds.value.join(',')
-                      : ''
-                  "
                   :zoom="7"
                   :center="[50.5, 4.5]"
                   :options="{ zoomControl: false, minZoom: 7, maxZoom: 18 }"
@@ -133,7 +131,12 @@
                           cursor: 'pointer',
                         }),
                       }"
-                      @ready="(layer) => polygonLayers.set(feature.id, layer)"
+                      @ready="
+                        (layer) => {
+                          polygonLayers.set(feature.id, layer);
+                          updatePolygonStyles();
+                        }
+                      "
                       @click="() => toggleCommuneSelection(feature.id)"
                     />
                   </template>
@@ -260,48 +263,6 @@ const store = useScenarioStore();
 const editTitle = ref(false);
 const newTitle = ref("");
 const newCommuneName = ref("");
-// Synchronise la sélection initiale des communes liées au scénario
-import { computed } from "vue";
-const selectedCommuneIds = computed(() =>
-  store.communes.map((c) => String(c.id))
-);
-
-// Met à jour la sélection et la surbrillance au chargement du détail
-watch(
-  () => store.communes,
-  (communes) => {
-    if (communes && communes.length) {
-      selectedCommuneIds.value = communes.map((c) => String(c.id));
-      setTimeout(() => updatePolygonStyles(), 200);
-    }
-  },
-  { immediate: true }
-);
-
-// Ajout : synchronise la sélection dès que le détail du scénario change (communes initiales)
-watch(
-  () => store.scenarioDetails && store.scenarioDetails.communes,
-  (communes) => {
-    if (communes && communes.length) {
-      selectedCommuneIds.value = communes.map((c) => String(c.id));
-      nextTick(() => updatePolygonStyles());
-    }
-  },
-  { immediate: true }
-);
-
-// Met à jour communeShapes côté window pour le store
-watch(
-  communeShapes,
-  (shapes) => {
-    if (typeof window !== "undefined") {
-      window.communeShapes = shapes;
-    }
-  },
-  { immediate: true }
-);
-
-const communeError = ref("");
 const showIntro = ref(false);
 const showConclusion = ref(false);
 const user = ref(null);
@@ -327,6 +288,13 @@ const selectedGeoJsonStyle = {
   ...geoJsonOptions.style(),
   fillColor: "#42a5f5",
 };
+
+watch(
+  () => store.communes,
+  () => {
+    updatePolygonStyles();
+  }
+);
 
 onMounted(async () => {
   try {
@@ -662,62 +630,6 @@ function updatePolygonStyles() {
           }
     );
   });
-}
-
-function isCommuneSelected(communeId) {
-  const id = typeof communeId === "string" ? communeId : String(communeId);
-  return selectedCommuneIds.value.some((cid) => String(cid) === id);
-}
-
-function getCommuneName(communeId) {
-  // Cherche le nom dans communeShapes
-  const shape = communeShapes.value.find((c) => c.id === communeId);
-  return shape?.geojson?.properties?.name_fr || `Commune ${communeId}`;
-}
-
-function removeCommune(communeId) {
-  // Retire la commune du store et met à jour la sélection
-  store.communes = store.communes.filter((c) => c.id !== communeId);
-  if (store.scenarioDetails) {
-    store.scenarioDetails.communes = store.communes;
-  } // Met à jour la sélection visuelle sur la carte
-  const idx = selectedCommuneIds.value.findIndex(
-    (cid) => String(cid) === String(communeId)
-  );
-  if (idx !== -1) {
-    selectedCommuneIds.value.splice(idx, 1);
-    updatePolygonStyles();
-  }
-}
-
-// Ajoute ici la logique pour addCommune et removeCommune si tu veux les centraliser dans le store
-function addCommune() {
-  const input = newCommuneName.value.trim().toLowerCase();
-  if (!input) return;
-  // Cherche la commune par nom (insensible à la casse, ignore espaces)
-  const found = communeShapes.value.find((c) => {
-    const name = c.geojson?.properties?.name_fr
-      ?.toLowerCase()
-      .replace(/\s+/g, "");
-    return name === input.replace(/\s+/g, "");
-  });
-  if (!found) {
-    communeError.value = "Commune introuvable.";
-    return;
-  }
-  if (selectedCommuneIds.value.includes(String(found.id))) {
-    communeError.value = "Commune déjà sélectionnée.";
-    return;
-  }
-  if (selectedCommuneIds.value.length >= 3) {
-    communeError.value = "Maximum 3 communes.";
-    return;
-  }
-  selectedCommuneIds.value.push(String(found.id));
-  store.setSelectedCommunes(selectedCommuneIds.value);
-  updatePolygonStyles();
-  newCommuneName.value = "";
-  communeError.value = "";
 }
 </script>
 
