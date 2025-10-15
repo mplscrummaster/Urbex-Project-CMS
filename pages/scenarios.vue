@@ -44,8 +44,18 @@
                 updatePolygonStyles(store);
               }
             "
-            @removeCommune="(id) => { store.removeCommune(id); updatePolygonStyles(store); }"
-            @toggleCommuneSelection="(id) => { toggleCommuneSelection(id); updatePolygonStyles(store); }"
+            @removeCommune="
+              (id) => {
+                store.removeCommune(id);
+                updatePolygonStyles(store);
+              }
+            "
+            @toggleCommuneSelection="
+              (id) => {
+                toggleCommuneSelection(id);
+                updatePolygonStyles(store);
+              }
+            "
             @polygonReady="
               (id, layer) => {
                 setPolygonLayer(id, layer);
@@ -183,6 +193,7 @@ import BlockAudio from "@/src/components/scenario-blocks/BlockAudio.vue";
 import { LGeoJson } from "@vue-leaflet/vue-leaflet";
 import axios from "axios";
 import { ref, onMounted, watch, nextTick } from "vue";
+import { useScenarioBlocks } from "@/src/composables/useScenarioBlocks";
 
 import { useScenarioStore } from "@/src/stores/scenario";
 import { LMap } from "@vue-leaflet/vue-leaflet";
@@ -190,19 +201,19 @@ import { blockUtils, isBlockEmpty } from "@/src/composables/blockUtils";
 import { useToast } from "@/src/composables/useToast";
 import { useLeafletMap } from "@/src/composables/useLeafletMap";
 
-const communeShapes = ref([]);
-const showIntroAddMenu = ref(false);
-const showOutroAddMenu = ref(false);
 const store = useScenarioStore();
+const token = ref(null);
+const communeShapes = ref([]);
 const editTitle = ref(false);
 const newTitle = ref("");
 const newCommuneName = ref("");
 const showIntro = ref(false);
 const showConclusion = ref(false);
 const user = ref(null);
-const token = ref(null);
 const isClientReady = ref(false);
 const { toastMsg, showToast } = useToast();
+const { showIntroAddMenu, showOutroAddMenu, addBlock, removeBlock } =
+  useScenarioBlocks(store, token, showToast);
 
 const CARTO_DARK =
   "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
@@ -276,106 +287,6 @@ onMounted(() => {
     { immediate: true }
   );
 });
-
-async function addBlock(section, type, mission = null) {
-  const payload = {
-    position_block: 1,
-    type_block: type,
-    content_text: "",
-    url_media: "",
-    caption: "",
-  };
-  let res;
-  try {
-    if (section === "intro") {
-      res = await axios.post(
-        `http://localhost:3000/api/scenarios/${store.selectedScenario.id}/intro/blocks`,
-        payload,
-        { headers: { Authorization: `Bearer ${token.value}` } }
-      );
-      if (res?.data?.id) {
-        store.scenarioDetails.introBlocks = [
-          ...store.scenarioDetails.introBlocks,
-          {
-            ...payload,
-            id: res.data.id,
-            _id_block: res.data.id,
-            type: type,
-          },
-        ];
-      }
-      showIntroAddMenu.value = false;
-    } else if (section === "outro") {
-      res = await axios.post(
-        `http://localhost:3000/api/scenarios/${store.selectedScenario.id}/outro/blocks`,
-        payload,
-        { headers: { Authorization: `Bearer ${token.value}` } }
-      );
-      if (res?.data?.id) {
-        store.scenarioDetails.outroBlocks = [
-          ...store.scenarioDetails.outroBlocks,
-          {
-            ...payload,
-            id: res.data.id,
-            _id_block: res.data.id,
-            type: type,
-          },
-        ];
-      }
-      showOutroAddMenu.value = false;
-    } else if (section === "mission" && mission) {
-      res = await axios.post(
-        `http://localhost:3000/api/missions/${
-          mission._id_mission || mission.id
-        }/blocks`,
-        payload,
-        { headers: { Authorization: `Bearer ${token.value}` } }
-      );
-      if (res?.data?.id) {
-        if (!mission.blocks) mission.blocks = [];
-        mission.blocks.push({
-          ...payload,
-          id: res.data.id,
-          _id_block: res.data.id,
-          type: type,
-        });
-      }
-      mission._showAddMenu = false;
-    }
-  } catch (e) {
-    showToast("Erreur lors de la création du bloc.");
-  }
-}
-
-function removeBlock(section, blockId, mission = null) {
-  console.log(
-    "Suppression bloc",
-    section,
-    blockId,
-    store.scenarioDetails.introBlocks
-  );
-  if (section === "intro") {
-    store.scenarioDetails.introBlocks =
-      store.scenarioDetails.introBlocks.filter((b) => {
-        const realId = b._id_block || b.id;
-        if (realId === blockId) store.deletedBlockIds.push(realId);
-        return realId !== blockId;
-      });
-  } else if (section === "outro") {
-    store.scenarioDetails.outroBlocks =
-      store.scenarioDetails.outroBlocks.filter((b) => {
-        const realId = b._id_block || b.id;
-        if (realId === blockId) store.deletedBlockIds.push(realId);
-        return realId !== blockId;
-      });
-  } else if (section === "mission" && mission) {
-    mission.blocks = mission.blocks.filter((b) => {
-      const realId = b._id_block || b.id;
-      if (realId === blockId) store.deletedBlockIds.push(realId);
-      return realId !== blockId;
-    });
-  }
-}
 
 let L;
 onMounted(async () => {
@@ -487,5 +398,4 @@ function toggleCommuneSelection(communeId) {
 // updatePolygonStyles est maintenant géré par le composable useLeafletMap
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>
