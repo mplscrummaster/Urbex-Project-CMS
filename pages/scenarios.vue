@@ -1,38 +1,18 @@
 <template>
   <div class="scenarios-page twocol">
-    <div class="sidebar">
-      <h2>Mes scénarios</h2>
-      <div v-if="store.loading">Chargement…</div>
-      <div v-else>
-        <div v-if="store.error" class="error">{{ store.error }}</div>
-        <ul class="scenario-list">
-          <li
-            v-for="s in store.scenarios"
-            :key="s.id"
-            :class="[
-              'scenario-item',
-              store.selectedScenario && store.selectedScenario.id === s.id
-                ? 'active'
-                : '',
-              s.is_published ? 'published' : 'draft',
-            ]"
-            @click="selectScenario(s)"
-          >
-            <strong>{{ s.title_scenario }}</strong>
-            <span
-              class="scenario-status-badge"
-              :class="s.is_published ? 'badge-published' : 'badge-draft'"
-            >
-              {{ s.is_published ? "Publié" : "Brouillon" }}
-            </span>
-          </li>
-        </ul>
-        <form @submit.prevent="createScenario" class="scenario-form">
-          <input v-model="newTitle" placeholder="Nouveau scénario" />
-          <button type="submit">Créer</button>
-        </form>
-      </div>
-    </div>
+    <ScenarioListSidebar
+      :scenarios="store.scenarios"
+      :selectedScenario="store.selectedScenario"
+      :loading="store.loading"
+      :error="store.error"
+      @selectScenario="selectScenario"
+      @createScenario="
+        (title) => {
+          newTitle = title;
+          createScenario();
+        }
+      "
+    />
     <div class="main-content">
       <div v-if="store.detailsLoading">Chargement du détail…</div>
       <div v-else-if="store.detailsError" class="error">
@@ -40,32 +20,17 @@
       </div>
       <div v-else-if="store.scenarioDetails">
         <div class="scenario-detail">
-          <div class="scenario-title-row">
-            <template v-if="editTitle">
-              <input
-                v-model="store.scenarioDetails.title_scenario"
-                class="edit-title-input"
-              />
-              <button class="icon-btn" @click="saveTitle" title="Valider">
-                <svg width="20" height="20" viewBox="0 0 20 20">
-                  <path
-                    d="M7 13.5l-3.5-3.5 1.41-1.41L7 10.67l7.09-7.09 1.41 1.41z"
-                    fill="#6366f1"
-                  />
-                </svg>
-              </button>
-            </template>
-            <template v-else>
-              <h2>{{ store.scenarioDetails.title_scenario }}</h2>
-              <button
-                class="icon-btn"
-                @click="editTitle = true"
-                title="Éditer le titre"
-              >
-                <span class="material-symbols-rounded">edit</span>
-              </button>
-            </template>
-          </div>
+          <ScenarioTitleEditor
+            :title="store.scenarioDetails.title_scenario"
+            :editTitle="editTitle"
+            @edit="editTitle = true"
+            @save="
+              (newTitle) => {
+                store.scenarioDetails.title_scenario = newTitle;
+                saveTitle();
+              }
+            "
+          />
           <CommuneSelector
             :communes="store.communes"
             :communeShapes="communeShapes"
@@ -174,6 +139,8 @@ import MissionList from "@/src/components/scenario/MissionList.vue";
 import ScenarioOutro from "@/src/components/scenario/ScenarioOutro.vue";
 import CommuneSelector from "@/src/components/CommuneSelector.vue";
 import ScenarioActions from "@/src/components/ScenarioActions.vue";
+import ScenarioTitleEditor from "@/src/components/ScenarioTitleEditor.vue";
+import ScenarioListSidebar from "@/src/components/ScenarioListSidebar.vue";
 
 import { useScenarioStore } from "@/src/stores/scenario";
 import { LMap } from "@vue-leaflet/vue-leaflet";

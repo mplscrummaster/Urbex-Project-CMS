@@ -94,8 +94,8 @@ const props = defineProps({
 .commune-selector .commune-pill {
   display: inline-flex;
   align-items: center;
-  background: #e3e7f7;
-  color: #183a5a;
+  background: #22476b;
+  color: #e3e7f7;
   border-radius: 999px;
   padding: 0.25rem 0.75rem;
   font-size: 0.95em;
@@ -106,7 +106,7 @@ const props = defineProps({
 .commune-selector .pill-remove {
   background: none;
   border: none;
-  color: #6366f1;
+  color: #42a5f5;
   font-size: 1.1em;
   margin-left: 0.5em;
   cursor: pointer;
@@ -115,6 +115,29 @@ const props = defineProps({
   transition: color 0.2s;
 }
 .commune-selector .pill-remove:hover {
-  color: #d32f2f;
+  color: #f59e0b;
+}
+.commune-selector input {
+  background: #22476b;
+  color: #e3e7f7;
+  border: 1px solid #22476b;
+  border-radius: 0.4em;
+  padding: 0.3em 0.7em;
+}
+.commune-selector input::placeholder {
+  color: #90caf9;
+}
+.commune-selector button {
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 0.4em;
+  padding: 0.3em 1em;
+  font-weight: 500;
+  cursor: pointer;
+}
+.commune-selector .error {
+  color: #f59e0b;
+  margin-top: 0.5em;
 }
 </style>
