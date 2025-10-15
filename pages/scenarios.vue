@@ -134,13 +134,8 @@
 </template>
 
 <script setup>
-const deletedMissionIds = ref([]);
-async function removeMission(missionId) {
-  store.missions = store.missions.filter(
-    (m) => (m._id_mission || m.id) !== missionId
-  );
-  store.deletedMissionIds.push(missionId);
-}
+import { useMissions } from "@/src/composables/useMissions";
+
 // Sous-composants principaux
 /**
  * ScenarioListSidebar
@@ -214,6 +209,7 @@ const isClientReady = ref(false);
 const { toastMsg, showToast } = useToast();
 const { showIntroAddMenu, showOutroAddMenu, addBlock, removeBlock } =
   useScenarioBlocks(store, token, showToast);
+const { removeMission, reorderMissions } = useMissions(store);
 
 const CARTO_DARK =
   "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
@@ -257,9 +253,8 @@ onMounted(async () => {
 });
 // ...existing code...
 
-// Initialisation des blocks dans chaque mission si absent
+// Initialisation utilisateur et missions
 onMounted(() => {
-  // Initialisation utilisateur et missions
   if (typeof window !== "undefined") {
     const userStr = window.localStorage.getItem("user");
     if (userStr) {
@@ -273,19 +268,6 @@ onMounted(() => {
     isClientReady.value = true;
     store.fetchScenarios(user.value?.id, token.value);
   }
-  // Initialisation des blocks dans chaque mission si absent
-  watch(
-    () => store.missions,
-    (missions) => {
-      if (Array.isArray(missions)) {
-        missions.forEach((m) => {
-          if (!m.blocks && m.mission_blocks) m.blocks = m.mission_blocks;
-          if (!m.blocks) m.blocks = [];
-        });
-      }
-    },
-    { immediate: true }
-  );
 });
 
 let L;
@@ -364,7 +346,7 @@ function createScenario() {
 }
 
 function onMissionOrderChange() {
-  store.reorderMissions(store.missions);
+  reorderMissions();
 }
 
 async function saveDraft() {
@@ -397,5 +379,3 @@ function toggleCommuneSelection(communeId) {
 }
 // updatePolygonStyles est maintenant géré par le composable useLeafletMap
 </script>
-
-<style scoped></style>
