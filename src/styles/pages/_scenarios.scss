@@ -133,59 +133,119 @@ form.scenario-form {
   color: #dc2626;
   margin-bottom: 1rem;
 }
+/* Masquer le logo Leaflet en bas à droite */
+.leaflet-control-attribution {
+  display: none !important;
+}
+
 .collapsible-card {
-  background: $color-surface;
-  border-radius: $radius-md;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  margin-bottom: 2rem;
-  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 0.5rem;
+  padding: 0;
 }
 .collapsible-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: $color-text !important;
-  background: $color-bg-alt !important;
-  border-radius: $radius-sm;
+  background-color: #23325a;
+  margin: 0;
   padding: 0.5rem 1rem;
-  margin-bottom: 1rem;
-  transition: background 0.2s;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
-.collapsible-header:hover {
-  background: $color-accent-soft;
+.collapsible-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
 }
-.collapsible-card textarea,
-.collapsible-card input,
-.scenario-detail input,
-.scenario-detail textarea {
-  background: $color-bg !important;
-  color: $color-text !important;
-  border: 1px solid $color-border;
-  border-radius: $radius-sm;
+.collapsible-header span {
+  font-size: 1.2rem;
+}
+.block-item {
+  background: #16243a;
+  border: 1px solid #223b54;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 0.7rem;
+  padding: 0.7rem 1.2rem;
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  gap: 0.7rem;
+  position: relative;
+}
+.block-drag-handle.material-symbols-rounded {
+  color: #90caf9;
+  font-size: 1.6em;
+  align-self: flex-start;
+}
+.remove-block-btn {
+  margin-left: auto !important;
+  background: none;
+  border: none;
+  color: #90caf9;
+  font-size: 1.6em;
+  cursor: pointer;
+  align-self: flex-start;
+  padding: 0.2em 0.3em;
+  transition: color 0.2s;
+}
+.remove-block-btn:hover {
+  color: #e57373;
+}
+.block-drag-handle.material-symbols-rounded {
+  color: #90caf9;
+}
+.block-text {
+  flex: 1;
+  padding: 0;
+  border: none;
+}
+.block-text textarea {
+  width: 100%;
+  border: none;
+  resize: none;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  background-color: #23325a;
+  color: #f5f7fa;
+}
+.mission-block {
+  padding: 0.5rem 1rem;
+  border-top: 1px solid #ddd;
+}
+.mission-block div {
+  margin-bottom: 0.5rem;
+}
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 1000;
+  background: #3b82f6;
+  color: #fff;
+  padding: 1rem 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-weight: 600;
+}
+input,
+textarea {
+  background: #212d4a;
+  color: #f5f7fa;
+  border: 1px solid #23325a;
+  border-radius: 0.3rem;
   padding: 0.5rem;
 }
-.collapsible-card h3 {
-  margin: 0;
-}
-.collapsible-card .block-text {
-  margin-bottom: 1rem;
-}
-.collapsible-card .mission-block {
-  background: $color-bg-alt;
-  border-radius: $radius-sm;
-  padding: 1rem;
-  margin-bottom: 1rem;
-}
-.collapsible-card button,
-.scenario-detail button {
-  background: $color-accent;
+button {
+  background: #3b82f6;
   color: #fff;
   border: none;
-  border-radius: $radius-sm;
-  padding: 0.5rem 1rem;
-  font-weight: 600;
+  border-radius: 0.3rem;
+  padding: 0.5rem 1.2rem;
   cursor: pointer;
+  font-weight: 600;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

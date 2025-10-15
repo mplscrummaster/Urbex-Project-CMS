@@ -14,10 +14,17 @@
               store.selectedScenario && store.selectedScenario.id === s.id
                 ? 'active'
                 : '',
+              s.is_published ? 'published' : 'draft',
             ]"
             @click="selectScenario(s)"
           >
             <strong>{{ s.title_scenario }}</strong>
+            <span
+              class="scenario-status-badge"
+              :class="s.is_published ? 'badge-published' : 'badge-draft'"
+            >
+              {{ s.is_published ? "Publié" : "Brouillon" }}
+            </span>
           </li>
         </ul>
         <form @submit.prevent="createScenario" class="scenario-form">
@@ -36,7 +43,7 @@
           <div class="scenario-title-row">
             <template v-if="editTitle">
               <input
-                v-model="store.scenarioDetails.scenario.title_scenario"
+                v-model="store.scenarioDetails.title_scenario"
                 class="edit-title-input"
               />
               <button class="icon-btn" @click="saveTitle" title="Valider">
@@ -49,7 +56,7 @@
               </button>
             </template>
             <template v-else>
-              <h2>{{ store.scenarioDetails.scenario.title_scenario }}</h2>
+              <h2>{{ store.scenarioDetails.title_scenario }}</h2>
               <button
                 class="icon-btn"
                 @click="editTitle = true"
@@ -61,12 +68,24 @@
           </div>
           <div class="scenario-global-infos">
             <h3>Communes liées</h3>
-            <ul>
-              <li v-for="commune in store.communes" :key="commune.id">
+            <div class="commune-pills">
+              <span
+                v-for="commune in store.communes"
+                :key="commune.id"
+                class="commune-pill"
+              >
                 {{ commune.name_fr }}
-                <!-- Ajoute ici le bouton de suppression et la logique si besoin -->
-              </li>
-            </ul>
+                <button
+                  class="pill-remove"
+                  @click="removeCommune(commune.id)"
+                  title="Retirer la commune"
+                  type="button"
+                >
+                  &times;
+                </button>
+              </span>
+            </div>
+
             <div v-if="store.communes.length < 3">
               <input
                 v-model="newCommuneName"
@@ -84,21 +103,36 @@
               <h4>Choix visuel des communes</h4>
               <div v-if="communeShapes.length">
                 <LMap
+                  :key="
+                    selectedCommuneIds.value
+                      ? selectedCommuneIds.value.join(',')
+                      : ''
+                  "
                   :zoom="7"
                   :center="[50.5, 4.5]"
-                  :options="{ zoomControl: false }"
+                  :options="{ zoomControl: false, minZoom: 7, maxZoom: 18 }"
                   style="
                     height: 320px;
                     width: 100%;
                     border-radius: 0.5rem;
                     overflow: hidden;
-                    background: transparent;
+                    background: #183a5a; /* bleu foncé custom */
                   "
                 >
                   <template v-for="feature in communeShapes" :key="feature.id">
                     <LGeoJson
                       :geojson="feature.geojson"
-                      :options="geoJsonOptions"
+                      :options="{
+                        style: () => ({
+                          color: '#1976d2',
+                          weight: 1,
+                          fillColor: '#1976d2',
+                          fillOpacity: 0.2,
+                          cursor: 'pointer',
+                        }),
+                      }"
+                      @ready="(layer) => polygonLayers.set(feature.id, layer)"
+                      @click="() => toggleCommuneSelection(feature.id)"
                     />
                   </template>
                 </LMap>
@@ -108,281 +142,32 @@
               </div>
             </div>
           </div>
-          <div class="collapsible-card">
-            <div class="collapsible-header" @click="openCollapse('intro')">
-              <h3>Introduction</h3>
-              <span class="material-symbols-rounded">{{
-                showIntro ? "expand_less" : "expand_more"
-              }}</span>
-            </div>
-            <div v-if="showIntro">
-              <div><strong>Blocs de contenu :</strong></div>
-              <draggable
-                v-model="store.scenarioDetails.introBlocks"
-                item-key="id"
-                handle=".block-drag-handle"
-                @end="() => {}"
-              >
-                <template #item="{ element: block }">
-                  <div
-                    class="block-item"
-                    style="display: flex; align-items: center; gap: 0.5rem"
-                  >
-                    <span
-                      class="block-drag-handle material-symbols-rounded"
-                      style="cursor: grab"
-                      >drag_indicator</span
-                    >
-                    <component
-                      :is="getBlockComponent(block)"
-                      :block="block"
-                      @remove="removeBlock('intro', block.id)"
-                    />
-                  </div>
-                </template>
-              </draggable>
-              <div class="add-block-row">
-                <button
-                  class="add-block-btn"
-                  @click="showIntroAddMenu = !showIntroAddMenu"
-                >
-                  +
-                </button>
-                <div v-if="showIntroAddMenu" class="add-block-menu">
-                  <button @click="addBlock('intro', 'text')">Texte</button>
-                  <button @click="addBlock('intro', 'image')">
-                    Image (lien)
-                  </button>
-                  <button @click="addBlock('intro', 'video')">
-                    Vidéo (lien)
-                  </button>
-                  <button @click="addBlock('intro', 'audio')">
-                    Audio (lien)
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <draggable
-            v-model="store.missions"
-            item-key="id"
-            handle=".drag-handle"
-            @end="onMissionOrderChange"
-          >
-            <template #item="{ element: mission, index: idx }">
-              <div class="collapsible-card">
-                <div
-                  class="collapsible-header"
-                  @click="openCollapse('mission', idx)"
-                >
-                  <span
-                    class="drag-handle material-symbols-rounded"
-                    style="cursor: grab; margin-right: 0.7rem"
-                    >drag_indicator</span
-                  >
-                  <h3>Mission {{ idx + 1 }} : {{ mission.title }}</h3>
-                  <span class="material-symbols-rounded">{{
-                    mission._open ? "expand_less" : "expand_more"
-                  }}</span>
-                </div>
-                <div v-if="mission._open">
-                  <div class="mission-block">
-                    <div>
-                      <strong>Nom :</strong> <input v-model="mission.title" />
-                    </div>
-                    <div class="gps-section" style="margin: 1rem 0">
-                      <label style="margin-right: 1rem">
-                        <span>Latitude :</span>
-                        <input
-                          type="number"
-                          step="any"
-                          v-model.number="mission.latitude"
-                          style="width: 7rem"
-                        />
-                      </label>
-                      <label>
-                        <span>Longitude :</span>
-                        <input
-                          type="number"
-                          step="any"
-                          v-model.number="mission.longitude"
-                          style="width: 7rem"
-                        />
-                      </label>
-                      <div style="margin-top: 1rem">
-                        <LMap
-                          :zoom="mission.latitude && mission.longitude ? 14 : 2"
-                          :center="
-                            mission.latitude && mission.longitude
-                              ? [mission.latitude, mission.longitude]
-                              : [48.858, 2.347]
-                          "
-                          :options="{ zoomControl: false }"
-                          style="
-                            height: 180px;
-                            width: 100%;
-                            border-radius: 0.5rem;
-                            overflow: hidden;
-                          "
-                          @click="
-                            (e) => {
-                              mission.latitude = e.latlng.lat;
-                              mission.longitude = e.latlng.lng;
-                            }
-                          "
-                        >
-                          <LTileLayer
-                            :url="CARTO_DARK"
-                            :attribution="CARTO_ATTR"
-                          />
-                          <LMarker
-                            v-if="mission.latitude && mission.longitude"
-                            :lat-lng="[mission.latitude, mission.longitude]"
-                          />
-                        </LMap>
-                      </div>
-                    </div>
-                    <div>
-                      <strong>Blocs de contenu :</strong>
-                      <draggable
-                        v-model="mission.blocks"
-                        item-key="id"
-                        handle=".block-drag-handle"
-                        @end="() => {}"
-                      >
-                        <template #item="{ element: block }">
-                          <div
-                            class="block-item"
-                            style="
-                              display: flex;
-                              align-items: center;
-                              gap: 0.5rem;
-                            "
-                          >
-                            <span
-                              class="block-drag-handle material-symbols-rounded"
-                              style="cursor: grab"
-                              >drag_indicator</span
-                            >
-                            <component
-                              :is="getBlockComponent(block)"
-                              :block="block"
-                              @remove="
-                                removeBlock('mission', block.id, mission)
-                              "
-                            />
-                          </div>
-                        </template>
-                      </draggable>
-                      <div class="add-block-row">
-                        <button
-                          class="add-block-btn"
-                          @click="mission._showAddMenu = !mission._showAddMenu"
-                        >
-                          +
-                        </button>
-                        <div v-if="mission._showAddMenu" class="add-block-menu">
-                          <button @click="addBlock('mission', 'text', mission)">
-                            Texte
-                          </button>
-                          <button
-                            @click="addBlock('mission', 'image', mission)"
-                          >
-                            Image (lien)
-                          </button>
-                          <button
-                            @click="addBlock('mission', 'video', mission)"
-                          >
-                            Vidéo (lien)
-                          </button>
-                          <button
-                            @click="addBlock('mission', 'audio', mission)"
-                          >
-                            Audio (lien)
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <strong>Texte énigme :</strong>
-                      <textarea
-                        v-model="mission.riddle_text"
-                        rows="2"
-                        style="width: 100%"
-                      />
-                    </div>
-                    <div>
-                      <strong>Mot réponse :</strong>
-                      <input v-model="mission.answer_word" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </template>
-          </draggable>
-          <div class="collapsible-card">
-            <div class="collapsible-header" @click="openCollapse('conclusion')">
-              <h3>Conclusion</h3>
-              <span class="material-symbols-rounded">{{
-                showConclusion ? "expand_less" : "expand_more"
-              }}</span>
-            </div>
-            <div v-if="showConclusion">
-              <div><strong>Blocs de contenu :</strong></div>
-              <draggable
-                v-model="store.scenarioDetails.outroBlocks"
-                item-key="id"
-                handle=".block-drag-handle"
-                @end="() => {}"
-              >
-                <template #item="{ element: block }">
-                  <div
-                    class="block-item"
-                    style="display: flex; align-items: center; gap: 0.5rem"
-                  >
-                    <span
-                      class="block-drag-handle material-symbols-rounded"
-                      style="cursor: grab"
-                      >drag_indicator</span
-                    >
-                    <component
-                      :is="getBlockComponent(block)"
-                      :block="block"
-                      @remove="removeBlock('outro', block.id)"
-                    />
-                  </div>
-                </template>
-              </draggable>
-              <div class="add-block-row">
-                <button
-                  class="add-block-btn"
-                  @click="showOutroAddMenu = !showOutroAddMenu"
-                >
-                  +
-                </button>
-                <div v-if="showOutroAddMenu" class="add-block-menu">
-                  <button @click="addBlock('outro', 'text')">Texte</button>
-                  <button @click="addBlock('outro', 'image')">
-                    Image (lien)
-                  </button>
-                  <button @click="addBlock('outro', 'video')">
-                    Vidéo (lien)
-                  </button>
-                  <button @click="addBlock('outro', 'audio')">
-                    Audio (lien)
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <p><strong>Prérequis & Progression :</strong></p>
-          <pre>{{ store.scenarioDetails.progress }}</pre>
-          <p><strong>Communes :</strong></p>
-          <ul>
-            <li v-for="commune in store.communes" :key="commune.id">
-              {{ commune.name_fr }}
-            </li>
-          </ul>
+          <ScenarioIntro
+            :blocks="store.scenarioDetails.introBlocks"
+            :showIntro="showIntro"
+            :showIntroAddMenu="showIntroAddMenu"
+            @toggleIntro="() => openCollapse('intro')"
+            @addBlock="(type) => addBlock('intro', type)"
+            @removeBlock="(id) => removeBlock('intro', id)"
+            @toggleAddMenu="() => (showIntroAddMenu = !showIntroAddMenu)"
+          />
+          <MissionList
+            :missions="store.missions"
+            @orderChange="onMissionOrderChange"
+            @openCollapse="(idx) => openCollapse('mission', idx)"
+            @addBlock="(type, mission) => addBlock('mission', type, mission)"
+            @removeBlock="(id, mission) => removeBlock('mission', id, mission)"
+          />
+          <ScenarioOutro
+            :blocks="store.scenarioDetails.outroBlocks"
+            :showOutro="showConclusion"
+            :showOutroAddMenu="showOutroAddMenu"
+            @toggleOutro="() => openCollapse('conclusion')"
+            @addBlock="(type) => addBlock('outro', type)"
+            @removeBlock="(id) => removeBlock('outro', id)"
+            @toggleAddMenu="() => (showOutroAddMenu = !showOutroAddMenu)"
+          />
+          <!-- Sections Prérequis & Progression et Communes supprimées -->
           <div
             class="scenario-actions"
             style="
@@ -392,12 +177,16 @@
               margin-top: 2rem;
             "
           >
+            <button @click="cancelChanges" class="btn-cancel">Annuler</button>
             <button @click="saveDraft" class="btn-draft">
               Sauvegarder en brouillon
             </button>
-            <button @click="cancelChanges" class="btn-cancel">Annuler</button>
             <button @click="savePublish" class="btn-publish">
-              Sauvegarder et publier
+              {{
+                store.scenarioDetails.is_published
+                  ? "Mettre à jour la publication"
+                  : "Sauvegarder et publier"
+              }}
             </button>
           </div>
         </div>
@@ -431,8 +220,76 @@
 // Fonction utilitaire pour savoir si un bloc est vide
 import { LGeoJson } from "@vue-leaflet/vue-leaflet";
 import axios from "axios";
+import { ref, onMounted, watch, nextTick } from "vue";
+import BlockText from "@/src/components/scenario-blocks/BlockText.vue";
+import BlockImage from "@/src/components/scenario-blocks/BlockImage.vue";
+import BlockVideo from "@/src/components/scenario-blocks/BlockVideo.vue";
+import BlockAudio from "@/src/components/scenario-blocks/BlockAudio.vue";
+import ScenarioIntro from "@/src/components/scenario/ScenarioIntro.vue";
+import MissionList from "@/src/components/scenario/MissionList.vue";
+import ScenarioOutro from "@/src/components/scenario/ScenarioOutro.vue";
+
+import { useScenarioStore } from "@/src/stores/scenario";
+import draggable from "vuedraggable";
+import { LMap, LTileLayer, LMarker } from "@vue-leaflet/vue-leaflet";
 
 const communeShapes = ref([]);
+const showIntroAddMenu = ref(false);
+const showOutroAddMenu = ref(false);
+const store = useScenarioStore();
+const editTitle = ref(false);
+const newTitle = ref("");
+const newCommuneName = ref("");
+// Synchronise la sélection initiale des communes liées au scénario
+const selectedCommuneIds = ref([]);
+
+// Met à jour la sélection et la surbrillance au chargement du détail
+watch(
+  () => store.communes,
+  (communes) => {
+    if (communes && communes.length) {
+      selectedCommuneIds.value = communes.map((c) => String(c.id));
+      setTimeout(() => updatePolygonStyles(), 200);
+    }
+  },
+  { immediate: true }
+);
+
+// Ajout : synchronise la sélection dès que le détail du scénario change (communes initiales)
+watch(
+  () => store.scenarioDetails && store.scenarioDetails.communes,
+  (communes) => {
+    if (communes && communes.length) {
+      selectedCommuneIds.value = communes.map((c) => String(c.id));
+      nextTick(() => updatePolygonStyles());
+    }
+  },
+  { immediate: true }
+);
+
+// Met à jour communeShapes côté window pour le store
+watch(
+  communeShapes,
+  (shapes) => {
+    if (typeof window !== "undefined") {
+      window.communeShapes = shapes;
+    }
+  },
+  { immediate: true }
+);
+
+const communeError = ref("");
+const showIntro = ref(false);
+const showConclusion = ref(false);
+const user = ref(null);
+const token = ref(null);
+const isClientReady = ref(false);
+const toastMsg = ref("");
+const toastTimeout = ref(null);
+
+const CARTO_DARK =
+  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+const CARTO_ATTR = '&copy; <a href="https://carto.com/attributions">CARTO</a>';
 
 const geoJsonOptions = {
   style: () => ({
@@ -441,6 +298,11 @@ const geoJsonOptions = {
     fillColor: "#1976d2",
     fillOpacity: 0.2,
   }),
+};
+
+const selectedGeoJsonStyle = {
+  ...geoJsonOptions.style(),
+  fillColor: "#42a5f5",
 };
 
 onMounted(async () => {
@@ -471,7 +333,7 @@ function isBlockEmpty(block) {
   return false;
   return true;
 }
-import { ref, onMounted, defineComponent, watch, h } from "vue";
+
 // Utilitaires pour compatibilité structure API
 function getIntroBlocks() {
   return (
@@ -490,132 +352,6 @@ function getOutroBlocks() {
 function getMissionBlocks(mission) {
   return mission.blocks || mission.mission_blocks || [];
 }
-const BlockText = defineComponent({
-  props: { block: Object },
-  emits: ["remove"],
-  render() {
-    return h("div", { class: "block-text" }, [
-      h("textarea", {
-        rows: 2,
-        style: "width: 100%",
-        value: this.block.content_text,
-        onInput: (e) => {
-          this.block.content_text = e.target.value;
-        },
-      }),
-      h(
-        "button",
-        {
-          class: "remove-block-btn",
-          style: "margin-left:auto;",
-          onClick: () => this.$emit("remove"),
-        },
-        [h("span", { class: "material-symbols-rounded" }, "delete")]
-      ),
-    ]);
-  },
-});
-const BlockImage = defineComponent({
-  props: { block: Object },
-  emits: ["remove"],
-  render() {
-    return h("div", { class: "block-image" }, [
-      h("input", {
-        value: this.block.url_media,
-        placeholder: "Lien image",
-        style: "width: 100%",
-        onInput: (e) => {
-          this.block.url_media = e.target.value;
-        },
-      }),
-      h(
-        "button",
-        {
-          class: "remove-block-btn",
-          style: "margin-left:auto;",
-          onClick: () => this.$emit("remove"),
-        },
-        [h("span", { class: "material-symbols-rounded" }, "delete")]
-      ),
-      this.block.url_media
-        ? h("div", { style: "margin-top:0.5rem" }, [
-            h("img", {
-              src: this.block.url_media,
-              style: "max-width:100%;max-height:120px;border-radius:0.25rem",
-            }),
-          ])
-        : null,
-    ]);
-  },
-});
-const BlockVideo = defineComponent({
-  props: { block: Object },
-  emits: ["remove"],
-  render() {
-    return h("div", { class: "block-video" }, [
-      h("input", {
-        value: this.block.url_media,
-        placeholder: "Lien vidéo",
-        style: "width: 100%",
-        onInput: (e) => {
-          this.block.url_media = e.target.value;
-        },
-      }),
-      h(
-        "button",
-        {
-          class: "remove-block-btn",
-          style: "margin-left:auto;",
-          onClick: () => this.$emit("remove"),
-        },
-        [h("span", { class: "material-symbols-rounded" }, "delete")]
-      ),
-      this.block.url_media
-        ? h("div", { style: "margin-top:0.5rem" }, [
-            h("video", {
-              src: this.block.url_media,
-              controls: true,
-              style: "max-width:100%;max-height:120px;border-radius:0.25rem",
-            }),
-          ])
-        : null,
-    ]);
-  },
-});
-const BlockAudio = defineComponent({
-  props: { block: Object },
-  emits: ["remove"],
-  render() {
-    return h("div", { class: "block-audio" }, [
-      h("input", {
-        value: this.block.url_media,
-        placeholder: "Lien audio",
-        style: "width: 100%",
-        onInput: (e) => {
-          this.block.url_media = e.target.value;
-        },
-      }),
-      h(
-        "button",
-        {
-          class: "remove-block-btn",
-          style: "margin-left:auto;",
-          onClick: () => this.$emit("remove"),
-        },
-        [h("span", { class: "material-symbols-rounded" }, "delete")]
-      ),
-      this.block.url_media
-        ? h("div", { style: "margin-top:0.5rem" }, [
-            h("audio", {
-              src: this.block.url_media,
-              controls: true,
-              style: "width:100%",
-            }),
-          ])
-        : null,
-    ]);
-  },
-});
 
 function getBlockComponent(block) {
   switch (block.type) {
@@ -631,9 +367,6 @@ function getBlockComponent(block) {
       return BlockText;
   }
 }
-
-const showIntroAddMenu = ref(false);
-const showOutroAddMenu = ref(false);
 
 // Initialisation des blocks dans chaque mission si absent
 onMounted(() => {
@@ -668,7 +401,7 @@ onMounted(() => {
 
 function addBlock(section, type, mission = null) {
   const newBlock = {
-    id: Date.now() + Math.random(),
+    id: Math.floor(Math.random() * 1000000) + 6000,
     type,
     content_text: "",
     content_url: "",
@@ -697,10 +430,7 @@ function removeBlock(section, blockId, mission = null) {
     mission.blocks = mission.blocks.filter((b) => b.id !== blockId);
   }
 }
-import { useScenarioStore } from "@/src/stores/scenario";
-import draggable from "vuedraggable";
-import { LMap, LTileLayer, LMarker } from "@vue-leaflet/vue-leaflet";
-// Import Leaflet et CSS côté client uniquement
+
 let L;
 onMounted(async () => {
   if (typeof window !== "undefined") {
@@ -721,14 +451,6 @@ onMounted(async () => {
   }
 });
 
-const store = useScenarioStore();
-const editTitle = ref(false);
-const newTitle = ref("");
-const newCommuneName = ref("");
-const communeError = ref("");
-const showIntro = ref(false);
-const showConclusion = ref(false);
-
 function openCollapse(type, idx = null) {
   if (type === "intro") {
     showIntro.value = !showIntro.value;
@@ -746,16 +468,6 @@ function openCollapse(type, idx = null) {
     });
   }
 }
-
-const user = ref(null);
-const token = ref(null);
-const isClientReady = ref(false);
-const toastMsg = ref("");
-const toastTimeout = ref(null);
-
-const CARTO_DARK =
-  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-const CARTO_ATTR = '&copy; <a href="https://carto.com/attributions">CARTO</a>';
 
 onMounted(() => {
   // Initialisation utilisateur et missions
@@ -807,11 +519,11 @@ function showToast(msg) {
 }
 
 async function saveDraft() {
-  await store.saveScenario("draft");
+  await store.saveScenarioFull("draft", token.value);
   showToast("Sauvegardé en brouillon !");
 }
 async function savePublish() {
-  await store.saveScenario("published");
+  await store.saveScenarioFull("published", token.value);
   showToast("Sauvegardé et publié !");
 }
 function cancelChanges() {
@@ -821,116 +533,135 @@ function cancelChanges() {
   }
 }
 
+const polygonLayers = new Map(); // id -> leaflet layer
+function toggleCommuneSelection(communeId) {
+  const id = typeof communeId === "string" ? communeId : String(communeId);
+  const idx = selectedCommuneIds.value.findIndex((cid) => String(cid) === id);
+  if (idx === -1) {
+    if (selectedCommuneIds.value.length < 3) {
+      selectedCommuneIds.value.push(id);
+    }
+  } else {
+    selectedCommuneIds.value.splice(idx, 1);
+  }
+  store.setSelectedCommunes(selectedCommuneIds.value);
+  // Met à jour le style du polygone sélectionné
+  updatePolygonStyles();
+}
+function updatePolygonStyles() {
+  polygonLayers.forEach((layer, id) => {
+    if (!layer || typeof layer.setStyle !== "function") return;
+    const selected = selectedCommuneIds.value.includes(String(id));
+    layer.setStyle(
+      selected
+        ? {
+            color: "#f59e0b", // amber border
+            weight: 4,
+            opacity: 0.8,
+            fillColor: "#fde68a", // amber light fill
+            fillOpacity: 0.4,
+            cursor: "pointer",
+          }
+        : {
+            color: "#1976d2",
+            weight: 1,
+            opacity: 0.5,
+            fillColor: "#1976d2",
+            fillOpacity: 0.2,
+            cursor: "pointer",
+          }
+    );
+  });
+}
+
+function isCommuneSelected(communeId) {
+  const id = typeof communeId === "string" ? communeId : String(communeId);
+  return selectedCommuneIds.value.some((cid) => String(cid) === id);
+}
+
+function getCommuneName(communeId) {
+  // Cherche le nom dans communeShapes
+  const shape = communeShapes.value.find((c) => c.id === communeId);
+  return shape?.geojson?.properties?.name_fr || `Commune ${communeId}`;
+}
+
+function removeCommune(communeId) {
+  // Retire la commune du store et met à jour la sélection
+  store.communes = store.communes.filter((c) => c.id !== communeId);
+  if (store.scenarioDetails) {
+    store.scenarioDetails.communes = store.communes;
+  } // Met à jour la sélection visuelle sur la carte
+  const idx = selectedCommuneIds.value.findIndex(
+    (cid) => String(cid) === String(communeId)
+  );
+  if (idx !== -1) {
+    selectedCommuneIds.value.splice(idx, 1);
+    updatePolygonStyles();
+  }
+}
+
 // Ajoute ici la logique pour addCommune et removeCommune si tu veux les centraliser dans le store
+function addCommune() {
+  const input = newCommuneName.value.trim().toLowerCase();
+  if (!input) return;
+  // Cherche la commune par nom (insensible à la casse, ignore espaces)
+  const found = communeShapes.value.find((c) => {
+    const name = c.geojson?.properties?.name_fr
+      ?.toLowerCase()
+      .replace(/\s+/g, "");
+    return name === input.replace(/\s+/g, "");
+  });
+  if (!found) {
+    communeError.value = "Commune introuvable.";
+    return;
+  }
+  if (selectedCommuneIds.value.includes(String(found.id))) {
+    communeError.value = "Commune déjà sélectionnée.";
+    return;
+  }
+  if (selectedCommuneIds.value.length >= 3) {
+    communeError.value = "Maximum 3 communes.";
+    return;
+  }
+  selectedCommuneIds.value.push(String(found.id));
+  store.setSelectedCommunes(selectedCommuneIds.value);
+  updatePolygonStyles();
+  newCommuneName.value = "";
+  communeError.value = "";
+}
 </script>
 
-<style>
-/* Masquer le logo Leaflet en bas à droite */
-.leaflet-control-attribution {
-  display: none !important;
-}
-/* Ajoute ici tes styles spécifiques si besoin */
-
-.collapsible-card {
+<style scoped>
+.commune-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   margin-bottom: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 0.5rem;
-  padding: 0;
 }
-
-.collapsible-header {
-  background-color: #f7f7f9;
-  margin: 0;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
+.commune-pill {
+  display: inline-flex;
   align-items: center;
-}
-
-.collapsible-header h3 {
-  margin: 0;
-  font-size: 1.1rem;
-}
-
-.collapsible-header span {
-  font-size: 1.2rem;
-}
-
-.block-item {
-  background: #16243a;
-  border: 1px solid #223b54;
-  border-radius: 0.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 0.7rem;
-  padding: 0.7rem 1.2rem;
-  width: 100%;
-  display: flex;
-  align-items: stretch;
-  gap: 0.7rem;
+  background: #e3e7f7;
+  color: #183a5a;
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.95em;
+  font-weight: 500;
+  box-shadow: 0 1px 4px rgba(24, 58, 90, 0.07);
   position: relative;
 }
-.block-drag-handle.material-symbols-rounded {
-  color: #90caf9;
-  font-size: 1.6em;
-  align-self: flex-start;
-}
-.remove-block-btn {
-  margin-left: auto !important;
+.pill-remove {
   background: none;
   border: none;
-  color: #90caf9;
-  font-size: 1.6em;
+  color: #6366f1;
+  font-size: 1.1em;
+  margin-left: 0.5em;
   cursor: pointer;
-  align-self: flex-start;
-  padding: 0.2em 0.3em;
+  padding: 0;
+  line-height: 1;
   transition: color 0.2s;
 }
-.remove-block-btn:hover {
-  color: #e57373;
-}
-.block-drag-handle.material-symbols-rounded {
-  color: #90caf9;
-}
-
-.block-text {
-  flex: 1;
-  padding: 0;
-  border: none;
-}
-
-.block-text textarea {
-  width: 100%;
-  border: none;
-  resize: none;
-  padding: 0.5rem;
-  border-radius: 0.25rem;
-  background-color: #fff;
-}
-
-.mission-block {
-  padding: 0.5rem 1rem;
-  border-top: 1px solid #ddd;
-}
-
-.mission-block div {
-  margin-bottom: 0.5rem;
-}
-
-.toast {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  z-index: 1000;
-  background: #3b82f6;
-  color: #fff;
-  padding: 1rem 2rem;
-  border-radius: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  font-weight: 600;
-}
-/* Masquer le logo Leaflet en bas à droite */
-.leaflet-control-attribution {
-  display: none !important;
+.pill-remove:hover {
+  color: #d32f2f;
 }
 </style>
