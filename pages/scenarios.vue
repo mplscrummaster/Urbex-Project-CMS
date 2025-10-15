@@ -38,7 +38,12 @@
             :maxCommunes="3"
             :newCommuneName="newCommuneName"
             @update:newCommuneName="(val) => (newCommuneName = val)"
-            @addCommune="(name) => store.addCommune(name, communeShapes)"
+            @addCommune="
+              (name) => {
+                store.addCommune(name, communeShapes);
+                updatePolygonStyles();
+              }
+            "
             @removeCommune="(id) => store.removeCommune(id)"
             @toggleCommuneSelection="toggleCommuneSelection"
             @polygonReady="
@@ -144,6 +149,7 @@ import ScenarioListSidebar from "@/src/components/ScenarioListSidebar.vue";
 
 import { useScenarioStore } from "@/src/stores/scenario";
 import { LMap } from "@vue-leaflet/vue-leaflet";
+import { blockUtils, isBlockEmpty } from "@/src/composables/blockUtils";
 
 const communeShapes = ref([]);
 const showIntroAddMenu = ref(false);
@@ -200,46 +206,7 @@ onMounted(async () => {
     // Optionally handle error
   }
 });
-function isBlockEmpty(block) {
-  if (!block) return true;
-  // Un bloc est vide seulement si aucun champ utile n'est rempli
-  if (block.type === "text") {
-    return !block.content_text || block.content_text.trim() === "";
-  }
-  if (["image", "video", "audio"].includes(block.type)) {
-    return !block.url_media || block.url_media.trim() === "";
-  }
-  // Si le type n'est pas reconnu, on l'affiche
-  return false;
-  return true;
-}
-
-// Utilitaires pour compatibilité structure API
-const blockUtils = {
-  getIntroBlocks(details) {
-    return details.introBlocks || details.intro_blocks || [];
-  },
-  getOutroBlocks(details) {
-    return details.outroBlocks || details.outro_blocks || [];
-  },
-  getMissionBlocks(mission) {
-    return mission.blocks || mission.mission_blocks || [];
-  },
-  getBlockComponent(block) {
-    switch (block.type) {
-      case "text":
-        return BlockText;
-      case "image":
-        return BlockImage;
-      case "video":
-        return BlockVideo;
-      case "audio":
-        return BlockAudio;
-      default:
-        return BlockText;
-    }
-  },
-};
+// ...existing code...
 
 // Initialisation des blocks dans chaque mission si absent
 onMounted(() => {
