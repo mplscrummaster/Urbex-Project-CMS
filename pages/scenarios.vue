@@ -134,6 +134,7 @@
 </template>
 
 <script setup>
+import { useUser } from "@/src/composables/useUser";
 import { useMissions } from "@/src/composables/useMissions";
 
 // Sous-composants principaux
@@ -197,15 +198,13 @@ import { useToast } from "@/src/composables/useToast";
 import { useLeafletMap } from "@/src/composables/useLeafletMap";
 
 const store = useScenarioStore();
-const token = ref(null);
+const { user, token, isClientReady, loadUserAndToken } = useUser();
 const communeShapes = ref([]);
 const editTitle = ref(false);
 const newTitle = ref("");
 const newCommuneName = ref("");
 const showIntro = ref(false);
 const showConclusion = ref(false);
-const user = ref(null);
-const isClientReady = ref(false);
 const { toastMsg, showToast } = useToast();
 const { showIntroAddMenu, showOutroAddMenu, addBlock, removeBlock } =
   useScenarioBlocks(store, token, showToast);
@@ -253,19 +252,10 @@ onMounted(async () => {
 });
 // ...existing code...
 
-// Initialisation utilisateur et missions
+// Initialisation utilisateur et missions centralisée
 onMounted(() => {
-  if (typeof window !== "undefined") {
-    const userStr = window.localStorage.getItem("user");
-    if (userStr) {
-      try {
-        user.value = JSON.parse(userStr);
-      } catch (e) {
-        user.value = null;
-      }
-    }
-    token.value = window.localStorage.getItem("token");
-    isClientReady.value = true;
+  loadUserAndToken();
+  if (isClientReady.value) {
     store.fetchScenarios(user.value?.id, token.value);
   }
 });
@@ -307,34 +297,6 @@ function openCollapse(type, idx = null) {
     });
   }
 }
-
-onMounted(() => {
-  // Initialisation utilisateur et missions
-  const userStr = window.localStorage.getItem("user");
-  if (userStr) {
-    try {
-      user.value = JSON.parse(userStr);
-    } catch (e) {
-      user.value = null;
-    }
-  }
-  token.value = window.localStorage.getItem("token");
-  isClientReady.value = true;
-  store.fetchScenarios(user.value?.id, token.value);
-  // Initialisation des blocks dans chaque mission si absent
-  watch(
-    () => store.missions,
-    (missions) => {
-      if (Array.isArray(missions)) {
-        missions.forEach((m) => {
-          if (!m.blocks && m.mission_blocks) m.blocks = m.mission_blocks;
-          if (!m.blocks) m.blocks = [];
-        });
-      }
-    },
-    { immediate: true }
-  );
-});
 
 function selectScenario(s) {
   store.selectScenario(s, token.value);
