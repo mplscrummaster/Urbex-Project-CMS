@@ -1,0 +1,1 @@
+export { default } from "file:///Users/louisjanquart/Desktop/Cepegra/Concepteur%20web%20front-end/javascript/atelier/Urbex-Project-CMS/node_modules/@nuxt/vite-builder/dist/runtime/client.manifest.mjs"
