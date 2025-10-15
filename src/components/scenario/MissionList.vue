@@ -7,10 +7,23 @@ import BlockVideo from "@/src/components/scenario-blocks/BlockVideo.vue";
 import BlockAudio from "@/src/components/scenario-blocks/BlockAudio.vue";
 import { LMap, LTileLayer, LMarker } from "@vue-leaflet/vue-leaflet";
 
+/**
+ * Props du composant MissionList
+ * @property {Array} missions - Liste des missions à afficher
+ */
 const props = defineProps({
   missions: Array,
 });
 
+/**
+ * Événements émis par MissionList
+ * @event orderChange - Changement d'ordre des missions
+ * @event openCollapse - Ouverture d'une mission
+ * @event addBlock - Ajout d'un bloc à une mission
+ * @event removeBlock - Suppression d'un bloc d'une mission
+ * @event update:blocks - Mise à jour des blocs d'une mission
+ * @event removeMission - Suppression d'une mission
+ */
 const emit = defineEmits([
   "orderChange",
   "openCollapse",
@@ -22,6 +35,19 @@ const emit = defineEmits([
 
 function onOrderChange(e) {
   emit("orderChange", e.newList || props.missions);
+}
+
+function addBlock(type, mission, idx) {
+  const newBlock = { id: Date.now(), type };
+  mission.blocks.push(newBlock);
+  emit("update:blocks", { blocks: mission.blocks, missionIdx: idx });
+  emit("addBlock", type, mission);
+}
+
+function removeBlock(blockId, mission, idx) {
+  mission.blocks = mission.blocks.filter((b) => b.id !== blockId);
+  emit("update:blocks", { blocks: mission.blocks, missionIdx: idx });
+  emit("removeBlock", blockId, mission);
 }
 
 function togglePrerequisite(mission, prev, idx) {
@@ -54,19 +80,16 @@ function togglePrerequisite(mission, prev, idx) {
   }
 }
 
+// Mapping des types de blocs vers leurs composants
+const blockComponentMap = {
+  text: BlockText,
+  image: BlockImage,
+  video: BlockVideo,
+  audio: BlockAudio,
+};
+
 function getBlockComponent(block) {
-  switch (block.type) {
-    case "text":
-      return BlockText;
-    case "image":
-      return BlockImage;
-    case "video":
-      return BlockVideo;
-    case "audio":
-      return BlockAudio;
-    default:
-      return BlockText;
-  }
+  return blockComponentMap[block.type] || BlockText;
 }
 const CARTO_DARK =
   "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
