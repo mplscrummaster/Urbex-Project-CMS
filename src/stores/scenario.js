@@ -95,7 +95,7 @@ export const useScenarioStore = defineStore("scenario", () => {
    * @type {import('vue').Ref<String>} communeError - Message d'erreur lié aux communes
    */
   const communeError = ref("");
-  const API_URL = "http://localhost:3000/api/scenarios";
+  const API_URL = "https://michonmaximilien.dev/urbex-api/api/scenarios";
   /**
    * @type {import('vue').Ref<Array>} deletedMissionIds - Identifiants des missions supprimées
    */
@@ -158,7 +158,7 @@ export const useScenarioStore = defineStore("scenario", () => {
       for (const missionId of deletedMissionIds.value) {
         try {
           await axios.delete(
-            `http://localhost:3000/api/missions/${missionId}`,
+            `https://michonmaximilien.dev/urbex-api/api/missions/${missionId}`,
             {
               headers: { Authorization: `Bearer ${token}` },
             }
@@ -172,9 +172,12 @@ export const useScenarioStore = defineStore("scenario", () => {
     if (deletedBlockIds.value?.length) {
       for (const blockId of deletedBlockIds.value) {
         try {
-          await axios.delete(`http://localhost:3000/api/blocks/${blockId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          await axios.delete(
+            `https://michonmaximilien.dev/urbex-api/api/blocks/${blockId}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
         } catch (e) {
           handleApiError(e, `suppression bloc ${blockId}`);
         }
@@ -188,7 +191,7 @@ export const useScenarioStore = defineStore("scenario", () => {
       if (!m._id_mission) {
         try {
           const res = await axios.post(
-            `http://localhost:3000/api/scenarios/${scenarioId}/missions`,
+            `https://michonmaximilien.dev/urbex-api/api/scenarios/${scenarioId}/missions`,
             {
               position_mission: m.position,
               title_mission: m.title,
@@ -227,7 +230,7 @@ export const useScenarioStore = defineStore("scenario", () => {
           let res;
           if (ownerType === "scenario_intro") {
             res = await axios.post(
-              `http://localhost:3000/api/scenarios/${scenarioIdBlock}/intro/blocks`,
+              `https://michonmaximilien.dev/urbex-api/api/scenarios/${scenarioIdBlock}/intro/blocks`,
               {
                 position_block: b.position,
                 type_block: b.type,
@@ -239,7 +242,7 @@ export const useScenarioStore = defineStore("scenario", () => {
             );
           } else if (ownerType === "scenario_outro") {
             res = await axios.post(
-              `http://localhost:3000/api/scenarios/${scenarioIdBlock}/outro/blocks`,
+              `https://michonmaximilien.dev/urbex-api/api/scenarios/${scenarioIdBlock}/outro/blocks`,
               {
                 position_block: b.position,
                 type_block: b.type,
@@ -252,7 +255,7 @@ export const useScenarioStore = defineStore("scenario", () => {
           } else if (ownerType === "mission") {
             // missionId doit être à jour
             res = await axios.post(
-              `http://localhost:3000/api/missions/${
+              `https://michonmaximilien.dev/urbex-api/api/missions/${
                 b._id_mission || b.mission_id
               }/blocks`,
               {
@@ -283,7 +286,7 @@ export const useScenarioStore = defineStore("scenario", () => {
       const missionId = m._id_mission || m.id;
       if (!missionId) continue;
       await axios.put(
-        `http://localhost:3000/api/missions/${missionId}`,
+        `https://michonmaximilien.dev/urbex-api/api/missions/${missionId}`,
         {
           position_mission: m.position,
           title_mission: m.title,
@@ -300,7 +303,7 @@ export const useScenarioStore = defineStore("scenario", () => {
       const missionId = m._id_mission || m.id;
       if (!missionId) continue;
       await axios.put(
-        `http://localhost:3000/api/missions/${missionId}/prerequisites`,
+        `https://michonmaximilien.dev/urbex-api/api/missions/${missionId}/prerequisites`,
         {
           prerequisites: Array.isArray(m.prerequisites)
             ? m.prerequisites.map(Number)
@@ -311,7 +314,7 @@ export const useScenarioStore = defineStore("scenario", () => {
     }
     // 4. Mettre à jour l'ordre des missions
     await axios.put(
-      `http://localhost:3000/api/scenarios/${scenarioId}/missions/reorder`,
+      `https://michonmaximilien.dev/urbex-api/api/scenarios/${scenarioId}/missions/reorder`,
       missions.value.map((m, idx) => ({
         id: m._id_mission || m.id,
         position: idx + 1,
@@ -320,7 +323,7 @@ export const useScenarioStore = defineStore("scenario", () => {
     );
     // 5. Mettre à jour les communes
     await axios.post(
-      `http://localhost:3000/api/scenarios/${scenarioId}/communes`,
+      `https://michonmaximilien.dev/urbex-api/api/scenarios/${scenarioId}/communes`,
       {
         commune_ids: communes.value.map((c) => c.id),
       },
@@ -345,7 +348,7 @@ export const useScenarioStore = defineStore("scenario", () => {
           let res;
           if (ownerType === "scenario_intro") {
             res = await axios.post(
-              `http://localhost:3000/api/scenarios/${scenarioIdBlock}/intro/blocks`,
+              `https://michonmaximilien.dev/urbex-api/api/scenarios/${scenarioIdBlock}/intro/blocks`,
               {
                 position_block: b.position,
                 type_block: b.type,
@@ -357,7 +360,7 @@ export const useScenarioStore = defineStore("scenario", () => {
             );
           } else if (ownerType === "scenario_outro") {
             res = await axios.post(
-              `http://localhost:3000/api/scenarios/${scenarioIdBlock}/outro/blocks`,
+              `https://michonmaximilien.dev/urbex-api/api/scenarios/${scenarioIdBlock}/outro/blocks`,
               {
                 position_block: b.position,
                 type_block: b.type,
@@ -369,7 +372,7 @@ export const useScenarioStore = defineStore("scenario", () => {
             );
           } else if (ownerType === "mission" && missionId) {
             res = await axios.post(
-              `http://localhost:3000/api/missions/${missionId}/blocks`,
+              `https://michonmaximilien.dev/urbex-api/api/missions/${missionId}/blocks`,
               {
                 position_block: b.position,
                 type_block: b.type,
@@ -396,7 +399,7 @@ export const useScenarioStore = defineStore("scenario", () => {
       if (b._id_block) {
         try {
           await axios.put(
-            `http://localhost:3000/api/blocks/${b._id_block}`,
+            `https://michonmaximilien.dev/urbex-api/api/blocks/${b._id_block}`,
             {
               position_block: b.position,
               type_block: b.type,
@@ -418,7 +421,7 @@ export const useScenarioStore = defineStore("scenario", () => {
         (b) => b._id_block || b.id
       );
       await axios.put(
-        `http://localhost:3000/api/scenarios/${scenarioId}/intro/blocks/reorder`,
+        `https://michonmaximilien.dev/urbex-api/api/scenarios/${scenarioId}/intro/blocks/reorder`,
         { blockIds },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -428,7 +431,7 @@ export const useScenarioStore = defineStore("scenario", () => {
         (b) => b._id_block || b.id
       );
       await axios.put(
-        `http://localhost:3000/api/scenarios/${scenarioId}/outro/blocks/reorder`,
+        `https://michonmaximilien.dev/urbex-api/api/scenarios/${scenarioId}/outro/blocks/reorder`,
         { blockIds },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -446,7 +449,7 @@ export const useScenarioStore = defineStore("scenario", () => {
           .filter(Boolean);
         if (reorderPayload.length) {
           await axios.put(
-            `http://localhost:3000/api/missions/${missionId}/blocks/reorder`,
+            `https://michonmaximilien.dev/urbex-api/api/missions/${missionId}/blocks/reorder`,
             reorderPayload,
             { headers: { Authorization: `Bearer ${token}` } }
           );

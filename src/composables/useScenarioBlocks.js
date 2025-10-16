@@ -18,7 +18,7 @@ export function useScenarioBlocks(store, token, showToast) {
       if (section === "intro") {
         // Toujours côté backend pour intro
         res = await axios.post(
-          `http://localhost:3000/api/scenarios/${store.selectedScenario.id}/intro/blocks`,
+          `https://michonmaximilien.dev/urbex-api/api/scenarios/${store.selectedScenario.id}/intro/blocks`,
           payload,
           { headers: { Authorization: `Bearer ${token.value}` } }
         );
@@ -37,7 +37,7 @@ export function useScenarioBlocks(store, token, showToast) {
       } else if (section === "outro") {
         // Toujours côté backend pour outro
         res = await axios.post(
-          `http://localhost:3000/api/scenarios/${store.selectedScenario.id}/outro/blocks`,
+          `https://michonmaximilien.dev/urbex-api/api/scenarios/${store.selectedScenario.id}/outro/blocks`,
           payload,
           { headers: { Authorization: `Bearer ${token.value}` } }
         );
@@ -66,7 +66,7 @@ export function useScenarioBlocks(store, token, showToast) {
         } else {
           // Mission existante en base, on peut appeler l'API
           res = await axios.post(
-            `http://localhost:3000/api/missions/${mission._id_mission}/blocks`,
+            `https://michonmaximilien.dev/urbex-api/api/missions/${mission._id_mission}/blocks`,
             payload,
             { headers: { Authorization: `Bearer ${token.value}` } }
           );

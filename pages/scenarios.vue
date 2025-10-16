@@ -143,9 +143,12 @@
 async function deleteScenario(scenario) {
   if (!scenario?.id) return;
   try {
-    await axios.delete(`http://localhost:3000/api/scenarios/${scenario.id}`, {
-      headers: { Authorization: `Bearer ${token.value}` },
-    });
+    await axios.delete(
+      `https://michonmaximilien.dev/urbex-api/api/scenarios/${scenario.id}`,
+      {
+        headers: { Authorization: `Bearer ${token.value}` },
+      }
+    );
     // Retire du store
     store.scenarios = store.scenarios.filter((s) => s.id !== scenario.id);
     if (store.selectedScenario?.id === scenario.id) {
@@ -272,7 +275,7 @@ const selectedGeoJsonStyle = {
 onMounted(async () => {
   try {
     const res = await axios.get(
-      "http://localhost:3000/api/communes/shapes.geojson"
+      "https://michonmaximilien.dev/urbex-api/api/communes/shapes.geojson"
     );
     if (res.data && res.data.features) {
       communeShapes.value = res.data.features.map((f) => ({
