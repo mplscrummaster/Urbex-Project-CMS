@@ -28,10 +28,13 @@ const router = useRouter();
 async function login() {
   error.value = "";
   try {
-    const res = await axios.post("http://localhost:3000/api/login", {
-      mail_user: mail.value,
-      password_user: password.value,
-    });
+    const res = await axios.post(
+      "https://michonmaximilien.dev/urbex-api/api/login",
+      {
+        mail_user: mail.value,
+        password_user: password.value,
+      }
+    );
     const data = res.data;
     console.log("Réponse API login:", data);
     localStorage.setItem("token", data.token);

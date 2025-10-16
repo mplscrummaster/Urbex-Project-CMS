@@ -4,7 +4,8 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   devServer: { port: 4000 },
   css: [
-    '@/src/styles/main.scss'
+    '@/src/styles/main.scss',
+    'leaflet/dist/leaflet.css'
   ],
   modules: [
     '@pinia/nuxt'
